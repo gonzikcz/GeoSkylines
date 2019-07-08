@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoSkylines", "GeoSkylines\GeoSkylines.csproj", "{DF2EFA3D-E455-414B-BC7B-5DB1C4DB3122}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DF2EFA3D-E455-414B-BC7B-5DB1C4DB3122}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF2EFA3D-E455-414B-BC7B-5DB1C4DB3122}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF2EFA3D-E455-414B-BC7B-5DB1C4DB3122}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF2EFA3D-E455-414B-BC7B-5DB1C4DB3122}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3BF618C6-6034-4F8F-84E7-93899D5EFC8F}
+	EndGlobalSection
+EndGlobal
