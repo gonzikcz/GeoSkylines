@@ -26,3 +26,8 @@ Import roads:
 - in game (with the mod activated), hit the keys "Ctrl + H"
 - wait until roads are created (might take minutes if importing large area)
 
+Export geodata:
+- you have to define the mid-point of the exported area (how are the data in game related to places on Earth; this information should be known from previous import of either elevation or roads)
+- in folder c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\ create a file named 'import_export.conf' that holds this information: MapName: value, CenterLatitude: value, CenterLongitude: value (see attached example)
+- in game (with the mod activated), hit the keys "Ctrl + G"
+- game data will be exported to flat files and stored in c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\ 
