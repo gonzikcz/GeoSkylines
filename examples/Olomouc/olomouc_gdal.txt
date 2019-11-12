@@ -1,0 +1,11 @@
+gdal_translate -scale 198 633 0 65536 -ot UInt16 -of PNG D:\data\QGIS\Olomouc_trees\olomouc_DEM.tif D:\data\Olomouc\olomouc_17km.png
+
+olomouc -60m min val
+gdal_translate -scale 138 633 0 65536 -ot UInt16 -of PNG D:\data\QGIS\Olomouc_trees\olomouc_DEM.tif D:\data\Olomouc\olomouc_17km_60lessMinval.png
+
+no rescaling max height
+gdal_translate -scale 138 1024 0 65536 -ot UInt16 -of PNG D:\data\QGIS\Olomouc_trees\olomouc_DEM.tif D:\data\Olomouc\olomouc_17km_noRescale.png
+
+
+7.11.2019 - more centered box for Olomouc area
+gdal_translate -scale 136 1024 0 65536 -projwin 653819.7345 5503970.4953 671095.4347 5486693.5624 -ot UInt16 -of PNG "F:/data/arcGIS/Olomouc_DEM_moreCentered/DMR 5G_5.tif" F:\data\arcGIS\Olomouc_DEM_moreCentered\Olomouc_CS_DEM.png

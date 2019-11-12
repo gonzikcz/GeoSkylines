@@ -1,0 +1,24 @@
+motorway,Highway
+trunk,Highway
+primary,Large Road
+secondary,Medium Road
+tertiary,Basic Road
+unclassified,Basic Road
+residential,Basic Road
+service,Basic Road
+motorway_link,HighwayRamp
+trunk_link,HighwayRamp
+primary_link,HighwayRamp
+secondary_link,Oneway Road
+tertiary_link,Oneway Road
+living_street,Oneway Road Decoration Grass
+pedestrian,
+track,Gravel Road
+bus_guideway,
+escape,Gravel Road
+raceway,
+road,Basic Road
+footway,
+bridleway,
+steps,
+path,
