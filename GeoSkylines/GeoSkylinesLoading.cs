@@ -26,7 +26,7 @@ namespace GeoSkylines
         }
     }
 
-    public class Road
+    public class GeoSkylinesRoad
     {
         public ulong roadId;
         public string roadName;
@@ -34,62 +34,57 @@ namespace GeoSkylines
         public string oneWay;
         public int lanes;
         public List<float[]> roadCoords;
+        public bool bridge;
 
-        public Road(ulong roadId, string roadName, string roadType, string oneWay, int lanes, List<float[]> roadCoords)
+        public GeoSkylinesRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<float[]> roadCoords)
         {
             this.roadId = roadId;
             this.roadName = roadName;
             this.roadType = roadType;
             this.oneWay = oneWay;
             this.lanes = lanes;
+            this.bridge = bridge;
             this.roadCoords = roadCoords;
         }
     }
-    public class Building
+    public class GeoSkylinesBuilding
     {
         public ulong bldId;
         public string bldType;
         public int bldLvl;
         public float[] bldCentroid;
+        public float angle;
+        public float width;
+        public float height;
 
-        public Building(ulong bldId, string bldType, int bldLvl, float[] bldCentroid)
+        public GeoSkylinesBuilding(ulong bldId, string bldType, int bldLvl, float[] bldCentroid, float angle, float width, float height)
         {
             this.bldId = bldId;
             this.bldType = bldType;
             this.bldLvl = bldLvl;
             this.bldCentroid = bldCentroid;
+            this.angle = angle;
+            this.width = width;
+            this.height = height;
+        }
+    }
+
+    public class GeoSkylinesService
+    {
+        public ulong serviceId;
+        public string serviceType;
+        public float[] serviceCentroid;
+
+        public GeoSkylinesService(ulong serviceId, string serviceType, float[] serviceCentroid)
+        {
+            this.serviceId = serviceId;
+            this.serviceType = serviceType;
+            this.serviceCentroid = serviceCentroid;
         }
     }
 
     public class GeoSkylinesLoading : ILoadingExtension
     {
-        private Randomizer rand;
-        private Dictionary<short, List<SimpleNode>> nodeMap = new Dictionary<short, List<SimpleNode>>();  
-        private Dictionary<string, List<float[]>> segments = new Dictionary<string, List<float[]>>();
-
-        public bool FindNode(out ushort netNodeId, float[] nodeCoords)
-        {
-            short xRound = (short)Math.Round(nodeCoords[0]);
-
-            if (nodeMap.ContainsKey(xRound))
-            {
-                foreach (SimpleNode node in nodeMap[xRound])
-                {
-                    if (node.nodeCoords[0] == nodeCoords[0])
-                    {
-                        if (node.nodeCoords[1] == nodeCoords[1])
-                        {
-                            netNodeId = node.nodeId;
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            netNodeId = 0;
-            return false;
-        }
-
         //called when level loading begins
         public void OnCreated(ILoading loading)
         {
@@ -98,7 +93,9 @@ namespace GeoSkylines
 
         public void OnLevelLoaded(LoadMode mode)
         {
-
+            //ConfirmPanel panel = UIView.library.ShowModal<ConfirmPanel>("ConfirmPanel");
+            //panel.SetMessage("Build road network?", "Confirm to build road network. ");            
+            //LoadingExtension.go.transform.localScale = new Vector3(8640f, 1f, 8640f);
         }
 
         public void OnLevelUnloading()
