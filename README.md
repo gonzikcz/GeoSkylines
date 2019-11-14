@@ -1,6 +1,20 @@
 # GeoSkylines
 Cities: Skylines game mod for import/export of geodata. 
 
+Three stages of creating playable model in Cities: Skylines based on geodata:
+1. Prepare geodata for import
+2. Create base model using GeoSkylines methods
+3. Create playable model (manual post-processing)
+
+1. Prepare geodata for import
+I chose to use a simple CSV format with geometry data recorded as WKT. Thus, any geo-dataset can be used. For testing I used OSM predominantly. For the CSV file preparation I used OSMSharp library (other programs such as QGIS or FME would suffice). See the code examples of the data preparation using OSMSharp. 
+During the data preparation phase I followed these steps:
+- Chose an area to model
+- Define a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV (text file) where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 metres to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. 
+- Recalculate the bounding box to WGS. (Metric projections are easy to calculate but for import and export, WGS coordinates are easier to use. Hence, there will be a lot of conversions going on between WGS and your chosen metric system). 
+- Calculate the mid-point of the bounding box (i.e. centroid) > this will be used for conversions between geographic coordinates (in WGS) and game coordinates
+
+
 The development of GeoSkylines was focused on providing following features:
 - Additional import/export of buildings and zones
 - Game roads are named according to the source road data
