@@ -112,6 +112,11 @@ GeoSkylinesExport.OutputPrefabInfo():
 - Description: outputs all road types (NetInfo), building types (BuidlingInfo) and tree types (TreeInfo) loaded currently in the game into "c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\output_log.txt". 
 - Note: this is valuable for creating the match CSV files and setting some variables in import_export.conf
 
+# Configuration of import and export methods
+CSV files for import, CSV files for matching types of objects, trees.png file and import_export.conf file have to be stored in folder: c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\. This folder is also used to store CSV files to output game objects as GIS data using the export methods (e.g. roads_cs.csv). 
+
+File import_export.conf ...
+
 
 The development of GeoSkylines was focused on providing following features:
 - Additional import/export of buildings and zones
