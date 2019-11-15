@@ -6,7 +6,7 @@ Three stages of creating playable model in Cities: Skylines based on geodata:
 2. Create base model using GeoSkylines methods
 3. Create playable model (manual post-processing)
 
-Prepare geodata for import
+# Prepare vector geodata for import
 I chose to use a simple CSV format with geometry data recorded as WKT. Thus, any geo-dataset can be used. For testing I used OSM predominantly. For the CSV file preparation I used OSMSharp library (other programs such as QGIS or FME would suffice). See the code examples of the data preparation using OSMSharp. 
 During the data preparation phase I followed these initial steps:
 - Selection of an area to model
@@ -14,8 +14,28 @@ During the data preparation phase I followed these initial steps:
 - Recalculate the bounding box to WGS. (Metric projections are easy to calculate but for import and export, WGS coordinates are easier to use.). 
 - Calculate the mid-point of the bounding box (i.e. centroid) > this will be used for conversions between geographic coordinates (in WGS) and game coordinates
 - download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. 
+- Filtering out most of the attributes. In most cases I just need the geometry, type of object (e.g. road type). See examples. 
+- Resulting CSV files should be named: roads_rwo.csv, waterway_rwo.csv, water_rwo.csv, buildings_rwo.csv, amenity_rwo.csv
 
-To prepare 
+# Prepare raster image for tree coverage 
+There is a GeoSkylines method for creating tree coverage from raster image. To prepare the raster image follow these steps:
+- For the selected area, obtain tree layer such as Urban Atlas Street Tree Layer or CORINE Landcover or layers from local authorities. 
+- Clip the layer by the defined bounding box (and do another required processing e.g. filtering out unwanted data)
+- In QGIS (or other GIS software), fill polygons with color, no line, turn off all other layers so you have white background and then export as image: extent defined by the bounding box, resolution should be 1081 x 1081 pixels. (sometimes it's bit off, maybe there's some better way)
+- name it trees.png
+
+# Prepare tree vector layer
+Alternatively, tree coverage can be created from vector data as well. To prepare the CSV file, follow these steps:
+- For the selected area, obtain tree layer such as Urban Atlas Street Tree Layer or CORINE Landcover or layers from local authorities.
+- Clip the layer by the defined bounding box (and do another required processing e.g. filtering out unwanted data)
+- In QGIS (or other GIS software), create a layer of regular points in the defined bounding box. You have to test the optimal distance between regular points, 10 metres is recommended. Add random offset to avoid gridded look of the regular points. 
+- Clip the layer of regular points by the polygons of the tree layer
+- Export clipped regular points layer as CSV with geometry in WKT format. Named it trees_rwo.csv. 
+
+# Import methods of GeoSkylines mod
+
+
+
 
 The development of GeoSkylines was focused on providing following features:
 - Additional import/export of buildings and zones
