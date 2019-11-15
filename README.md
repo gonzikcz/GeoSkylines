@@ -33,7 +33,51 @@ Alternatively, tree coverage can be created from vector data as well. To prepare
 - Export clipped regular points layer as CSV with geometry in WKT format. Named it trees_rwo.csv. 
 
 # Import methods of GeoSkylines mod
+GeoSkylinesImport.ImportRoads():
+- Run by hotkey combo: Ctrl + R
+- Requires: roads_rwo.csv, rwo_cs_road_match.csv, import_export.conf
+- Description: loops over all road segments in roads_rwo.csv, matches road types according to rwo_cs_road_match.csv, creates game nodes and then game roads, names the roads according to geodata orginals, creates a bridge if original data says bridge = yes, creates one way roads. 
 
+GeoSkylinesImport.ImportRails():
+- Run by hotkey combo: Ctrl + L
+- Requires: rails_rwo.csv, rwo_cs_rail_match.csv, import_export.conf
+- Description: loops over all rail segments in rails_rwo.csv, matches rail types according to rwo_cs_rail_match.csv, creates game nodes and then game rails. 
+
+GeoSkylinesImport.ImportWaterBody():
+- Run by hotkey combo: Ctrl + W
+- Requires: water_rwo.csv, import_export.conf
+- Description: loops over all records of standing water defined by a polygon in water_rwo.csv, creates a bounding box around polygon, then every 5 metres withing the bounding box calls Ray casting algorithm to find out whether point is within polygon or not. If yes, then lower terrain by defined value (variable ImportWaterDepth, see more details below). 
+
+GeoSkylinesImport.ImportWaterWay():
+- Run by hotkey combo: Ctrl + Q
+- Requires: waterway_rwo.csv, import_export.conf
+- Description: loops over all segments of water way in waterway_rwo.csv, lowers terrain by defined value (variable ImportWaterWayDepths, see more details below) every 5 metres between the vertices of each segments. 
+
+GeoSkylinesImport.ImportTreesRaster():
+- Run by hotkey combo: Ctrl + T
+- Requires: trees.png (1081 x 1081 resolution), import_export.conf
+- Description: loops over every pixel and for every non-white pixel it creates a tree. If variable ImportTreesRasterMultiply is defined, method adjust the number of trees created (see more details below). Method adds randomness into the position of the created trees. 
+
+GeoSkylinesImport.ImportTreesVector():
+- Run by hotkey combo: Ctrl + V
+- Requires: trees_rwo.csv, import_export.conf
+- Description: loops over all trees in trees_rwo.csv and creates a tree.
+
+GeoSkylinesImport.ImportZones():
+- Run by hotkey combo: Ctrl + Z
+- Requires: buildings_rwo.csv, rwo_cs_zone_match.csv, import_export.conf
+- Description: sets zones to existing zone blocks (must be called after creating roads, this will create zone blocks as well). First it loops over every building in buildings_rwo.csv, finds zone blocks near the position of the building, matches the building type to a game zone (e.g. building type = house to zone = ResidentialLow) according to rwo_cs_zone_match.csv and then assigns selected zone to the zone blocks. 
+
+GeoSkylinesImport.ImportServices():
+- Run by hotkey combo: Ctrl + S
+- Requires: amenity_rwo.csv, rwo_cs_service_match.csv, import_export.conf
+- Description: loops over every amenity (service) in amenity_rwo.csv, matches amenity type to a game service building according to rwo_cs_service_match.csv and creates a service building. 
+- Note: the service buildings created by this method doesn't seem to work properly but still it might be handy to know where the services are. It can be buldozed and then re-created manually. 
+
+GeoSkylinesImport.ImportBuildings():
+- Requires: buildings_rwo.csv, import_export.conf
+- Description: loops over every building in buildings_rwo.csv, tries to calculate the right building rotation angle and creates the building. 
+- Note: this method is not used due to many complications. Difficult to calculate the right rotation angle, buildings are offten to close to the roads, and mainly: creating buildings directly goes against the game logic where only zones are set. Although this can be overcome by mods, it was still quite unusable. 
 
 
 
