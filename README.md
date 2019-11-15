@@ -79,6 +79,38 @@ GeoSkylinesImport.ImportBuildings():
 - Description: loops over every building in buildings_rwo.csv, tries to calculate the right building rotation angle and creates the building. 
 - Note: this method is not used due to many complications. Difficult to calculate the right rotation angle, buildings are offten to close to the roads, and mainly: creating buildings directly goes against the game logic where only zones are set. Although this can be overcome by mods, it was still quite unusable. 
 
+# Export methods of GeoSkylines mod
+GeoSkylinesExport.ExportSegments(): 
+- Run by hotkey combo: Ctrl + G
+- Requires: import_export.conf
+- Description: loops over all roads created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the road as attributes). 
+
+GeoSkylinesExport.ExportBuildings():
+- Run by hotkey combo: Ctrl + H
+- Requires: import_export.conf
+- Description: loops over all buildings created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the building as attributes).
+
+GeoSkylinesExport.ExportZones():
+- Run by hotkey combo: Ctrl + J
+- Requires: import_export.conf
+- Description: loops over all zones created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the zone as attributes).
+
+GeoSkylinesExport.ExportTrees():
+- Run by hotkey combo: Ctrl + K
+- Requires: import_export.conf
+- Description: loops over all trees created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the tree as attributes).
+
+# Helper methods of GeoSkylines mod
+GeoSkylinesExport.DisplayLLOnMouseClick():
+- Runb by hotkey combo: Ctrl + left mouse click
+- Requires: import_export.conf
+- Description: Displays in a message box screen, game and Lat Lon coordinates of the place of the click. 
+
+GeoSkylinesExport.OutputPrefabInfo():
+- Run by hotkey combo: Ctrl + P
+- Requires: nothing
+- Description: outputs all road types (NetInfo), building types (BuidlingInfo) and tree types (TreeInfo) loaded currently in the game into "c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\output_log.txt". 
+- Note: this is valuable for creating the match CSV files and setting some variables in import_export.conf
 
 
 The development of GeoSkylines was focused on providing following features:
