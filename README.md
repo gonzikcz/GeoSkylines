@@ -8,7 +8,7 @@ Install game mod (if not on Steam workshop):
 - copy the GeoSkylines.dll file to newly created folder GeoSkylines
 - in game, go to Content Manager > Mods > turn on GeoSkylines
 
-GeoSkylines methods are called using the threading hooks via hotkeys, combination of Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conficts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. 
+GeoSkylines methods are called using the threading hooks via hotkeys, combination of Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conflicts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. 
 
 Three stages of creating playable model in Cities: Skylines based on geodata:
 1. Prepare geodata for import
@@ -19,7 +19,7 @@ Three stages of creating playable model in Cities: Skylines based on geodata:
 I chose to use a simple CSV format with geometry data recorded as WKT. Thus, any geo-dataset can be used. For testing I used OSM predominantly. For the CSV file preparation I used OSMSharp library (other programs such as QGIS or FME would suffice). See the code examples of the data preparation using OSMSharp. 
 During the data preparation phase I followed these initial steps:
 - Selection of an area to model
-- Defining a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 metres to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. 
+- Defining a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 meters to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. 
 - Recalculate the bounding box to WGS. (Metric projections are easy to calculate but for import and export, WGS coordinates are easier to use.). 
 - Calculate the mid-point of the bounding box (i.e. centroid) > this will be used for conversions between geographic coordinates (in WGS) and game coordinates
 - download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. 
@@ -93,22 +93,22 @@ GeoSkylinesImport.ImportBuildings():
 GeoSkylinesExport.ExportSegments(): 
 - Run by hotkey combo: Ctrl + G
 - Requires: import_export.conf
-- Description: loops over all roads created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the road as attributes). 
+- Description: loops over all roads created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the road as attributes). 
 
 GeoSkylinesExport.ExportBuildings():
 - Run by hotkey combo: Ctrl + H
 - Requires: import_export.conf
-- Description: loops over all buildings created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the building as attributes).
+- Description: loops over all buildings created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the building as attributes).
 
 GeoSkylinesExport.ExportZones():
 - Run by hotkey combo: Ctrl + J
 - Requires: import_export.conf
-- Description: loops over all zones created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the zone as attributes).
+- Description: loops over all zones created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the zone as attributes).
 
 GeoSkylinesExport.ExportTrees():
 - Run by hotkey combo: Ctrl + K
 - Requires: import_export.conf
-- Description: loops over all trees created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningfull information about the tree as attributes).
+- Description: loops over all trees created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the tree as attributes).
 
 # Helper methods of GeoSkylines mod
 GeoSkylinesExport.DisplayLLOnMouseClick():
@@ -148,7 +148,7 @@ ImportRoadsColumns:
 - Example: Id,Road Name,Road Type,One Way,Lanes,Bridge,Geometry
 
 ImportRoadsGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation. 
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation. 
 - Example: Geometry
 
 ImportRoadsCoordMax:
@@ -160,7 +160,7 @@ ImportRailsColumns:
 - Example: Id,Rail Type,Bridge,Geometry
 
 ImportRailsGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation. 
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation. 
 - Example: Geometry
 
 ImportRailsCoordMax:
@@ -172,7 +172,7 @@ ImportBuildingsColumns:
 - Example: Id, Buidling Type, Levels, Centroid, Geometry
 
 ImportBuildingsGeometryColumn:
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation.
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
 - Example: Centroid
 
 ImportBuildingsCoordMax: 
@@ -184,7 +184,7 @@ ImportServicesColumns:
 - Example: Id,Amenity,Centroid,Geometry
 
 ImportServicesGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation.
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
 - Example: Centroid
 
 ImportTreesRasterOffTolerance:
@@ -205,7 +205,7 @@ ImportTreesVectorColumns:
 - Example: WKT,id
 
 ImportTreesVectorGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation.
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
 - Example: WKT
 
 ImportTreesTreeTypes: 
@@ -222,7 +222,7 @@ ImportWaterWayColumns:
 - Example: WKT,name,waterway
 
 ImportWaterWayGeometryColumn:
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation.
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
 - Example: WKT
 
 ImportWaterWayTypes: 
@@ -244,7 +244,7 @@ ImportWaterColumns:
 - Example: Id,Geometry
 
 ImportWaterGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game ojbect creation.
+- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
 - Example: Geometry
 
 ImportWaterDepth: 
