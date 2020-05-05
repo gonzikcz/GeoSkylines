@@ -15,7 +15,7 @@ namespace GeoSkylines
     public class GeoSkylinesExport
     {
         private Randomizer rand;
-        private Dictionary<short, List<SimpleNode>> nodeMap = new Dictionary<short, List<SimpleNode>>();
+        private Dictionary<short, List<InputNode>> nodeMap = new Dictionary<short, List<InputNode>>();
 
         private WGS84_UTM convertor = new WGS84_UTM(null);
         private UTMResult centerUTM;
@@ -102,28 +102,37 @@ namespace GeoSkylines
             confloaded = true;
         }
 
-        public bool FindNode(out ushort netNodeId, float[] nodeCoords)
-        {
-            short xRound = (short)Math.Round(nodeCoords[0]);
+        //public bool FindNode(out ushort netNodeId, Vector2 node)
+        //{
+        //    short xRound = (short)Math.Round(node.x);
 
-            if (nodeMap.ContainsKey(xRound))
-            {
-                foreach (SimpleNode node in nodeMap[xRound])
-                {
-                    if (node.nodeCoords[0] == nodeCoords[0])
-                    {
-                        if (node.nodeCoords[1] == nodeCoords[1])
-                        {
-                            netNodeId = node.nodeId;
-                            return true;
-                        }
-                    }
-                }
-            }
+        //    if (nodeMap.ContainsKey(xRound))
+        //    {
+        //        foreach (InputNode sn in nodeMap[xRound])
+        //        {
+        //            // try to connect with near nodes
+        //            var xDiff = Mathf.Abs(sn.position.x - node.x);
+        //            var zDiff = Mathf.Abs(sn.position.y - node.y);
+        //            if (xDiff < 0.5)
+        //            {
+        //                if (zDiff < 0.5)
+        //                {
+        //                    netNodeId = sn.nodeId;
+        //                    return true;
+        //                }
+        //            }
+        //            //if (node.nodeCoords[0] == nodeCoords[0])
+        //            //    if (node.nodeCoords[1] == nodeCoords[1])
+        //            //    {
+        //            //        netNodeId = node.nodeId;
+        //            //        return true;
+        //            //    }
+        //        }
+        //    }
 
-            netNodeId = 0;
-            return false;
-        }
+        //    netNodeId = 0;
+        //    return false;
+        //}
 
         public void ExportBuildings()
         {
@@ -940,6 +949,10 @@ namespace GeoSkylines
         public void OutputPrefabInfo()
         {
             string msg = "";
+
+            msg += "Node Count: " + net_manager.m_nodeCount + "\n";
+            msg += "Segment Count: " + net_manager.m_segmentCount + "\n";
+            msg += "\n";
 
             msg += "TreeInfo: ";
             msg += "\n";

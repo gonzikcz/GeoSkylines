@@ -11,42 +11,226 @@ using ColossalFramework.Plugins;
 using ColossalFramework.IO;
 using System.Collections;
 using System.Threading;
+using burningmime.curves;
 
 namespace GeoSkylines
-{
-    public class SimpleNode
+{   
+    public class InputNode
     {
-        public ushort nodeId;
-        public float[] nodeCoords;
+        public int NetNodeId = -1;
+        public Vector2 position;
+        public bool junction = false;
+        public List<ulong> roadIds = new List<ulong>();
+        public List<string> roadNames = new List<string>();
 
-        public SimpleNode(ushort node, Vector3 pos)
+        public InputNode(Vector2 pos, string roadName, ulong roadId)
         {
-            nodeId = node;
-            nodeCoords = new float[2] { pos.x, pos.z };
+            position = pos;
+            roadIds.Add(roadId);
+            roadNames.Add(roadName);
+        }
+
+        public void SetJunction()
+        {
+            junction = true;
         }
     }
 
-    public class GeoSkylinesRoad
+    public class InputRoad
     {
+        private TerrainManager tm = TerrainManager.instance;
         public ulong roadId;
         public string roadName;
         public string roadType;
         public string oneWay;
         public int lanes;
-        public List<float[]> roadCoords;
+        public List<Vector2> vertexes;
+        public List<InputSegment> segments = new List<InputSegment>();
         public bool bridge;
+        public NetInfo netInfo;
 
-        public GeoSkylinesRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<float[]> roadCoords)
+        public InputRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<Vector2> vertexes, NetInfo ni)
         {
-            this.roadId = roadId;
+            this.roadId = roadId;            
             this.roadName = roadName;
             this.roadType = roadType;
             this.oneWay = oneWay;
             this.lanes = lanes;
             this.bridge = bridge;
-            this.roadCoords = roadCoords;
+            this.vertexes = vertexes;
+            netInfo = ni;
+
+            for (int i = 0; i < vertexes.Count - 1; i++)
+            {
+                var startNode = vertexes[i];
+                var endNode = vertexes[i + 1];
+                InputSegment segment = new InputSegment(this, i, startNode, Vector3.zero, Vector3.zero, endNode);
+                segments.Add(segment);
+            }
         }
     }
+
+    public class InputSegment
+    {
+        public InputRoad road;
+        public string segId;
+        public Vector2 startNode;
+        public Vector2 endNode;
+        public Vector2[] vertexes;
+        public Vector2 controlA;
+        public Vector2 controlB;
+        public float length;
+        public Vector2[] buffer;
+
+        public InputSegment(InputRoad road, int numSegRoad, Vector2 startNodePos, Vector2 controlA, Vector2 controlB, Vector2 endNodePos)
+        {
+            this.road = road;
+            segId = road.roadId + "-" + numSegRoad;
+            string msg = "";
+
+            this.startNode = startNodePos;
+            this.endNode = endNodePos;
+            vertexes = new Vector2[] { startNode, endNode};
+
+            int buffer = 10;
+            this.controlA = controlA;
+            this.controlB = controlB;
+            length = VectorUtils.LengthXZ(endNodePos - startNodePos);
+            List<Vector2> bufferPoints = new List<Vector2>();
+
+            //Dictionary<int, Vector2> startBufferPoints = new Dictionary<int, Vector2>();
+            //startBufferPoints.Add(1, new Vector2(startNode.x - buffer, startNode.y + buffer));
+            //startBufferPoints.Add(2, new Vector2(startNode.x + buffer, startNode.y + buffer));
+            //startBufferPoints.Add(3, new Vector2(startNode.x + buffer, startNode.y - buffer));
+            //startBufferPoints.Add(4, new Vector2(startNode.x - buffer, startNode.y - buffer));
+
+            //Dictionary<int, Vector2> endBufferPoints = new Dictionary<int, Vector2>();
+            //endBufferPoints.Add(1, new Vector2(endNode.x - buffer, endNode.y + buffer));
+            //endBufferPoints.Add(2, new Vector2(endNode.x + buffer, endNode.y + buffer));
+            //endBufferPoints.Add(3, new Vector2(endNode.x + buffer, endNode.y - buffer));
+            //endBufferPoints.Add(4, new Vector2(endNode.x - buffer, endNode.y - buffer));
+
+            //VertexLoop vertLoop = new VertexLoop(4);
+            //float shortest = 9999;
+            //Dictionary<float, List<int>> distPointIndexes = new Dictionary<float, List<int>>();
+            //foreach (KeyValuePair<int, Vector2> tmpPoint in startBufferPoints)
+            //{
+            //    float tmpDist = VectorUtils.LengthXZ(endNode - tmpPoint.Value);
+            //    if (!distPointIndexes.ContainsKey(tmpDist))
+            //        distPointIndexes.Add(tmpDist, new List<int>());
+            //    if (tmpDist <= shortest)
+            //    {
+            //        shortest = tmpDist;
+            //        distPointIndexes[shortest].Add(tmpPoint.Key);
+            //    }
+            //}
+
+            //int startInd = 0;
+            //var pointIndexes = distPointIndexes[shortest];
+            //if (pointIndexes.Count == 1)
+            //{
+            //    startInd = vertLoop.NextVertex(pointIndexes[0]);
+            //}
+            //else if (pointIndexes.Count == 2)
+            //{
+            //    int l = 9;
+            //    int h = 0;
+            //    foreach (var ind in pointIndexes)
+            //    {
+            //        l = Math.Min(l, ind);
+            //        h = Math.Max(h, ind);
+            //    }
+            //    if (h - l > 2)
+            //        h = l;
+            //    startInd = vertLoop.NextVertex(h);
+            //}
+
+            //shortest = 9999;
+            //distPointIndexes = new Dictionary<float, List<int>>();
+            //foreach (KeyValuePair<int, Vector2> tmpPoint in endBufferPoints)
+            //{
+            //    float tmpDist = VectorUtils.LengthXZ(startNode - tmpPoint.Value);
+            //    if (!distPointIndexes.ContainsKey(tmpDist))
+            //        distPointIndexes.Add(tmpDist, new List<int>());
+            //    if (tmpDist <= shortest)
+            //    {
+            //        shortest = tmpDist;
+            //        distPointIndexes[shortest].Add(tmpPoint.Key);
+            //    }
+            //}
+
+            //int connectInd = 0;
+            //pointIndexes = distPointIndexes[shortest];
+            //if (pointIndexes.Count == 1)
+            //{
+            //    connectInd = vertLoop.NextVertex(pointIndexes[0]);
+            //}
+            //else if (pointIndexes.Count == 2)
+            //{
+            //    int l = 9;
+            //    int h = 0;
+            //    foreach (var ind in pointIndexes)
+            //    {
+            //        l = Math.Min(l, ind);
+            //        h = Math.Max(h, ind);
+            //    }
+            //    if (h - l > 2)
+            //        h = l;
+            //    connectInd = vertLoop.NextVertex(h);
+            //}
+
+            //for (int i = 0; i < 4 - pointIndexes.Count; i++)
+            //{
+            //    var tmpInd = startInd;
+            //    for (int k = 0; k < i; k++)
+            //        tmpInd = vertLoop.NextVertex(tmpInd);
+            //    bufferPoints.Add(startBufferPoints[tmpInd]);
+            //}
+
+            //for (int i = 0; i < 4 - pointIndexes.Count; i++)
+            //{
+            //    var tmpInd = connectInd;
+            //    for (int k = 0; k < i; k++)
+            //        tmpInd = vertLoop.NextVertex(tmpInd);
+            //    bufferPoints.Add(endBufferPoints[tmpInd]);
+            //}
+
+            //bufferPoints.Add(startBufferPoints[startInd]);
+            this.buffer = bufferPoints.ToArray();
+            foreach (var p in bufferPoints)
+            {
+                msg += p.ToString() + "\n";
+            }
+            //Debug.Log(msg);
+        }
+    }
+
+    public class VertexLoop
+    {
+        public int num_of_vertexes;
+        
+        public VertexLoop(int num_of_vertexes)
+        {
+            this.num_of_vertexes = num_of_vertexes;
+        }
+
+        public int NextVertex(int vertex)
+        {
+            int nextVertex = vertex + 1;
+            if (nextVertex > 4)
+                nextVertex -= 4;
+            return nextVertex;
+        }
+        
+        public int PreviousVertex(int vertex)
+        {
+            int prevVertex = vertex - 1;
+            if (prevVertex < 1)
+                prevVertex += 4;
+            return prevVertex;
+        }
+    }
+
     public class GeoSkylinesBuilding
     {
         public ulong bldId;
@@ -66,6 +250,22 @@ namespace GeoSkylines
             this.angle = angle;
             this.width = width;
             this.height = height;
+        }
+    }
+
+    public class GeoSkylinesZone
+    {
+        public ulong zoneId;
+        public string zoneType;
+        public Vector2[] zoneVertices;
+        public int[] zoneBoundingBox;
+
+        public GeoSkylinesZone(ulong zoneId, string zoneType, Vector2[] zoneVertices, int[] zoneBoundingBox)
+        {
+            this.zoneId = zoneId;
+            this.zoneType = zoneType;
+            this.zoneVertices = zoneVertices;
+            this.zoneBoundingBox = zoneBoundingBox;
         }
     }
 
@@ -110,3 +310,4 @@ namespace GeoSkylines
         }
     }
 }
+

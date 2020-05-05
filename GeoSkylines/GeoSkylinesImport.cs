@@ -10,6 +10,7 @@ using System.Collections;
 using ColossalFramework.Math;
 using ColossalFramework;
 using System.Text.RegularExpressions;
+using burningmime.curves;
 //using System.Drawing;
 
 namespace GeoSkylines
@@ -18,7 +19,7 @@ namespace GeoSkylines
     {
         private Randomizer rand;
         private System.Random sysRand = new System.Random();
-        private Dictionary<short, List<SimpleNode>> nodeMap = new Dictionary<short, List<SimpleNode>>();
+        private Dictionary<short, List<InputNode>> nodeMap = new Dictionary<short, List<InputNode>>();
         private Dictionary<string, List<uint>> zoneBlockMap = new Dictionary<string, List<uint>>();        
 
         private BuildingManager bm = BuildingManager.instance;
@@ -34,6 +35,8 @@ namespace GeoSkylines
         private string railMappingFileName = "rwo_cs_rail_match.csv";
         private string impBuildingsFileName = "buildings_rwo.csv";
         private string buildingMatchFileName = "rwo_cs_building_match.csv";
+        private string impZonesFileName = "zones_rwo.csv";
+        private string zoneMatchFileName = "rwo_cs_zone_match.csv";
         private string impTreesRasterFileName = "trees.png";
         private string impTreesVectorFileName = "trees_rwo.csv";
         private string impWaterWayFileName = "waterway_rwo.csv";
@@ -60,6 +63,9 @@ namespace GeoSkylines
         private string[] impBuildingsColumns;
         private string impBuildingsGeometryColumn;
         private ushort impBuildingsCoordMax;
+        private string[] impZonesColumns;
+        private string impZonesGeometryColumn;
+        private ushort impZonesCoordMax;
         private ushort impTreesRasterOffTolerance;
         private int density = 1;
         private string[] impTreesVectorColumns;
@@ -141,6 +147,10 @@ namespace GeoSkylines
                     impBuildingsColumns = val.Split(',').Select(p => p.Trim()).ToArray();
                 else if (key == "ImportBuildingsGeometryColumn")
                     impBuildingsGeometryColumn = val.Trim() ?? "Geometry";
+                else if (key == "ImportZonesColumns")
+                    impZonesColumns = val.Split(',').Select(p => p.Trim()).ToArray();
+                else if (key == "ImportZonesGeometryColumn")
+                    impZonesGeometryColumn = val.Trim() ?? "Geometry";
                 else if (key == "ImportServicesColumns")
                     impServicesColumns = val.Split(',').Select(p => p.Trim()).ToArray();
                 else if (key == "ImportServicesGeometryColumn")
@@ -203,6 +213,11 @@ namespace GeoSkylines
                     ushort.TryParse(val, out impBuildingsCoordMax);
                     impBuildingsCoordMax = Math.Max(Math.Min(impBuildingsCoordMax, coordMax), (ushort)960);
                 }
+                else if (key == "ImportZonesCoordMax")
+                {
+                    ushort.TryParse(val, out impZonesCoordMax);
+                    impZonesCoordMax = Math.Max(Math.Min(impZonesCoordMax, coordMax), (ushort)960);
+                }
                 else if (key == "ImportTreesCoordMax")
                 {
                     ushort.TryParse(val, out impTreesCoordMax);
@@ -212,29 +227,6 @@ namespace GeoSkylines
 
             confloaded = true;
             
-        }
-
-        public bool FindNode(out ushort netNodeId, float[] nodeCoords)
-        {
-            short xRound = (short)Math.Round(nodeCoords[0]);
-
-            if (nodeMap.ContainsKey(xRound))
-            {
-                foreach (SimpleNode node in nodeMap[xRound])
-                {
-                    if (node.nodeCoords[0] == nodeCoords[0])
-                    {
-                        if (node.nodeCoords[1] == nodeCoords[1])
-                        {
-                            netNodeId = node.nodeId;
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            netNodeId = 0;
-            return false;
         }
 
         public void ImportRoads()
@@ -247,7 +239,7 @@ namespace GeoSkylines
             {
                 panel.SetMessage("GeoSkylines", roadMappingFileName + " file doesn't exist!", false);
                 return;
-            }                           
+            }
             else
             {
                 StreamReader r_map_sr = File.OpenText("Files/" + roadMappingFileName);
@@ -258,14 +250,16 @@ namespace GeoSkylines
                 }
             }
             
-            List<GeoSkylinesRoad> segments = new List<GeoSkylinesRoad>();
-            if (!File.Exists("Files/"+ impRoadsFileName))
+            if (!File.Exists("Files/" + impRoadsFileName))
             {
-                panel.SetMessage("GeoSkylines", impRoadsFileName+" file doesn't exist!", false);
+                panel.SetMessage("GeoSkylines", impRoadsFileName + " file doesn't exist!", false);
                 return;
             }
 
-            StreamReader sr = File.OpenText("Files/"+ impRoadsFileName);            
+            StreamReader sr = File.OpenText("Files/" + impRoadsFileName);
+
+            List<InputRoad> roads = new List<InputRoad>();
+            NetInfo ni;
 
             string[] fields;
             sr.ReadLine();
@@ -285,23 +279,29 @@ namespace GeoSkylines
                 for (int i = 0; i < impRoadsColumns.Length; i++)
                 {
                     var columnName = impRoadsColumns[i];
+                    var columnValue = fields[i].Replace("\"", "");
+                    //Debug.Log(columnName + ": " + columnValue);
                     if (columnName == impRoadsGeometryColumn)
-                        ProvideCoordsString(out coords, fields[i]);
+                        ProvideCoordsString(out coords, columnValue);
 
                     if (columnName.ToLower().Contains("one way"))
                     {
-                        oneWay = fields[i];
+                        oneWay = columnValue;
                         if (oneWay.Length == 0)
                             oneWay = "no";
                     }
 
-                    if (columnName.ToLower().Contains("lane"))                    
-                        if (fields[i].Length > 0)                                                    
-                            lanes = int.Parse(fields[i]);                    
+                    if (columnName.ToLower().Contains("lane"))
+                        if (columnValue.Length > 0)
+                        {
+                            //Debug.Log(fields[i] + " - " + columnValue);
+                            lanes = int.Parse(columnValue);
+                        }
+
 
                     if (columnName.ToLower().Contains("name"))
                     {
-                        streetName = fields[i];
+                        streetName = columnValue;
                         if (streetName.Length == 0)
                         {
                             streetName = "No Name " + cntNoName.ToString();
@@ -310,24 +310,29 @@ namespace GeoSkylines
                     }
 
                     if (columnName.ToLower() == "id")
-                        roadId = ulong.Parse(fields[i]);
+                        roadId = ulong.Parse(columnValue);
 
                     if (columnName.ToLower().Contains("type"))
-                        roadType = fields[i];
+                        roadType = columnValue;
 
                     if (columnName.ToLower().Contains("bridge"))
-                        if (fields[i] != "")
+                        if (columnValue != "")
                         {
                             bridge = true;
                             bridges++;
                         }
-                            
+
                 }
-                
+
                 if (coords == "")
-                    continue; 
-                                
-                List<float[]> segCoords = new List<float[]>();                        
+                    continue;
+
+                // get the NetInfo prefab here, skip records that have no mapping    
+                if (!ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay))
+                    continue;               
+
+                // get the vertexes from WKT
+                List<Vector2> segCoords = new List<Vector2>();
                 string[] coords_v = coords.Split(',');
 
                 foreach (var nodeCoords in coords_v)
@@ -342,103 +347,271 @@ namespace GeoSkylines
                     float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
                     if (Math.Abs(xCoord) < impRoadsCoordMax && Math.Abs(zCoord) < impRoadsCoordMax)
                     {
-                        segCoords.Add(new float[] { xCoord, zCoord });
+                        segCoords.Add(new Vector2(xCoord, zCoord));
                     }
                 }
 
-                GeoSkylinesRoad csRoad = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords);
-                segments.Add(csRoad);
+                // fill in NodeMap and set junctions
+                foreach (var segCoord in segCoords)
+                {
+                    if (FindNode(out InputNode inNode, segCoord))
+                    {
+                        inNode.SetJunction();
+                        inNode.roadIds.Add(roadId);
+                        inNode.roadNames.Add(streetName);
+                    }
+                    else
+                    {
+                        InputNode newNode = new InputNode(segCoord, streetName, roadId);
+                        short xRound = (short)Math.Round(segCoord.x);
+                        if (!nodeMap.ContainsKey(xRound))
+                        {
+                            nodeMap.Add(xRound, new List<InputNode>());
+                        }
+                        nodeMap[xRound].Add(newNode);
+                    }
+                }    
+
+                InputRoad inRoad = new InputRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni);
+                roads.Add(inRoad);
             }
+
+            //string msg = "Junctions: \n";
+            //foreach (KeyValuePair<short, List<InputNode>> tmpNodes in nodeMap)
+            //    foreach (var n in tmpNodes.Value)
+            //        if (n.junction)
+            //        {
+            //            msg += "RoadIds: ";
+            //            foreach (var rId in n.roadIds)
+            //                msg += rId + "; ";
+            //            msg += "| RoadNames: ";
+            //            foreach (var rN in n.roadNames)
+            //                msg += rN + "; "; 
+
+            //            msg += n.position.ToString() + "\n";
+            //        }    
+            //Debug.Log(msg);
+            //msg = "";
 
             sr.Close();
 
-            NetInfo ni;
-           
-            foreach (var segment in segments)
+            // I need to preserve junctions, otherwise using Bezier curves (big reduction in nodes)            
+            foreach (var road in roads)
             {
-                string street_name = segment.roadName;
-                List<float[]> nodes = segment.roadCoords;
-                string street_type = segment.roadType;
-                string oneWay = segment.oneWay;
-                int lanes = segment.lanes;
-
-                ni = PrefabCollection<NetInfo>.FindLoaded("Basic Road");
-
-                string prefab_name = "";
-                if (roadMapping.ContainsKey(street_type))
-                    prefab_name = roadMapping[street_type];
-                if (prefab_name == "")
-                    continue;
-
-                if (PrefabCollection<NetInfo>.LoadedExists(prefab_name))
-                    ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name);
-
-                if (segment.bridge)
+                List<Vector2> tmpPoss = new List<Vector2>();
+                foreach (var seg in road.segments)
                 {
-                    string prefab_name_bridge = prefab_name + " Bridge";
-                    if (PrefabCollection<NetInfo>.LoadedExists(prefab_name_bridge))
-                        ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name_bridge);
+                    foreach (var pos in seg.vertexes)
+                    {
+                        tmpPoss.Add(pos);
+                        
+                        if (tmpPoss.Count == 1)
+                            continue;
+                        
+                        if (FindNode(out InputNode inNode, pos) && inNode.junction)
+                        {
+                            CreateCSSegments(road, tmpPoss);
+                            tmpPoss = new List<Vector2>();
+                        }
+                    }
                 }
+                CreateCSSegments(road, tmpPoss);
+            }
+
+            panel.SetMessage("GeoSkylines", "Roads import complete.", false);
+        }
+
+        public bool ObtainNetInfo(out NetInfo ni, Dictionary<string, string> mapping, string netType, bool bridge, string oneWay)
+        {                            
+            ni = PrefabCollection<NetInfo>.FindLoaded("Basic Road");
+
+            string rt = netType;
+            if (oneWay == "yes")
+                rt += "_oneway";
+
+            string prefab_name = "";
+            if (mapping.ContainsKey(rt))
+                prefab_name = mapping[rt];
+            if (prefab_name == "" && mapping.ContainsKey(netType))
+                prefab_name = mapping[netType];
+            if (prefab_name == "")
+                return false;
+
+            if (PrefabCollection<NetInfo>.LoadedExists(prefab_name))
+                ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name);
+
+            if (bridge)
+            {
+                string prefab_name_bridge = prefab_name + " Bridge";
+                if (PrefabCollection<NetInfo>.LoadedExists(prefab_name_bridge))
+                    ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name_bridge);
+            }
+
+            //if (oneWay == "yes" && ni.name == "Basic Road")
+            //    ni = PrefabCollection<NetInfo>.FindLoaded("Oneway Road");
+            return true;
+        }
+
+        public void CreateCSSegments(InputRoad road, List<Vector2> nodes)
+        {
+            if (nodes.Count < 2)
+                return;
+
+            if (nodes.Count == 2)
+            {               
+                ObtainCSNode(out ushort startNetNodeId, nodes[0], road.netInfo);
+                ObtainCSNode(out ushort endNetNodeId, nodes[1], road.netInfo);
+
+                Vector3 endPos = nm.m_nodes.m_buffer[endNetNodeId].m_position;
+                Vector3 startPos = nm.m_nodes.m_buffer[startNetNodeId].m_position;
+                Vector3 startDir = VectorUtils.NormalizeXZ(endPos - startPos);
+                Vector3 endDir = -startDir;
+                   
+                SimulationManager.instance.AddAction(AddRoad(rand, road.netInfo, startNetNodeId, endNetNodeId, startDir, endDir, road.roadName));
                 
-                if (oneWay == "yes" && ni.name == "Basic Road")
-                    ni = PrefabCollection<NetInfo>.FindLoaded("Oneway Road");
+                //Debug.Log("Straight: " + road.roadName + " - " + road.roadId); 
+            }
+            else
+            {
+                // make curves using burningmime.curves     
+                //List<Vector2> reduced = CurvePreprocess.RdpReduce(vertexes.ToList(), 2);
+                CubicBezier[] curves = CurveFit.Fit(nodes, 8);
 
-                for (int i = 0; i < nodes.Count - 1; i++)
+                foreach (var curve in curves)
                 {
-                    float[] startNodeCoords = nodes[i];
-                    float[] endNodeCoords = nodes[i + 1];
-
-                    if (!FindNode(out ushort startNetNodeId, startNodeCoords))
-                    {
-                        var startNodePos = new Vector3(startNodeCoords[0], 0, startNodeCoords[1]);
-                        float yStart = tm.SampleRawHeightSmoothWithWater(startNodePos, false, 0f);
-                        startNodePos.y = yStart;
-
-                        if (nm.CreateNode(out startNetNodeId, ref rand, ni, startNodePos, sm.m_currentBuildIndex))
-                        {
-                            sm.m_currentBuildIndex += 1u;
-                        }
-
-                        short xRound = (short)Math.Round(startNodeCoords[0]);
-                        if (!nodeMap.ContainsKey(xRound))
-                        {
-                            nodeMap.Add(xRound, new List<SimpleNode>());
-                        }
-                        SimpleNode simpleNode = new SimpleNode(startNetNodeId, startNodePos);
-                        nodeMap[xRound].Add(simpleNode);
-                    }
-
-                    if (!FindNode(out ushort endNetNodeId, endNodeCoords))
-                    {
-                        var endNodePos = new Vector3(endNodeCoords[0], 0, endNodeCoords[1]);
-                        float yStart = tm.SampleRawHeightSmoothWithWater(endNodePos, false, 0f);
-                        endNodePos.y = yStart;
-
-                        if (nm.CreateNode(out endNetNodeId, ref rand, ni, endNodePos, sm.m_currentBuildIndex))
-                        {
-                            sm.m_currentBuildIndex += 1u;
-                        }
-
-                        short xRound = (short)Math.Round(endNodeCoords[0]);
-                        if (!nodeMap.ContainsKey(xRound))
-                        {
-                            nodeMap.Add(xRound, new List<SimpleNode>());
-                        }
-                        SimpleNode simpleNode = new SimpleNode(endNetNodeId, endNodePos);
-                        nodeMap[xRound].Add(simpleNode);
-                    }
+                    ObtainCSNode(out ushort startNetNodeId, curve.p0, road.netInfo);
+                    ObtainCSNode(out ushort endNetNodeId, curve.p3, road.netInfo);
 
                     Vector3 endPos = nm.m_nodes.m_buffer[endNetNodeId].m_position;
                     Vector3 startPos = nm.m_nodes.m_buffer[startNetNodeId].m_position;
-                    Vector3 startDirection = VectorUtils.NormalizeXZ(endPos - startPos);
 
-                    SimulationManager.instance.AddAction(AddRoad(rand, ni, startNetNodeId, endNetNodeId, startDirection, street_name));
+                    var controlA = new Vector3(curve.p1.x, 0, curve.p1.y);
+                    float tmpY = tm.SampleRawHeightSmoothWithWater(controlA, false, 0f);
+                    controlA.y = tmpY;
+                    var controlB = new Vector3(curve.p2.x, 0, curve.p2.y);
+                    tmpY = tm.SampleRawHeightSmoothWithWater(controlB, false, 0f);
+                    controlB.y = tmpY;
+                    Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
+                    Vector3 endDir = -VectorUtils.NormalizeXZ(endPos - controlB);
+                        
+                    SimulationManager.instance.AddAction(AddRoad(rand, road.netInfo, startNetNodeId, endNetNodeId, startDir, endDir, road.roadName));
+
+                    //Debug.Log("Curve: " + road.roadName + " - " + road.roadId);
+                }
+            }
+        }
+
+        public void ObtainCSNode(out ushort netNodeId, Vector2 pos, NetInfo ni)
+        {
+            netNodeId = 0;
+
+            if (FindNode(out InputNode inNode, pos))
+            {
+                if (inNode.NetNodeId != -1)
+                    netNodeId = (ushort)inNode.NetNodeId;
+                else
+                {
+                    var nodePos = new Vector3(inNode.position.x, 0, inNode.position.y);
+                    float y = tm.SampleRawHeightSmoothWithWater(nodePos, false, 0f);
+                    nodePos.y = y;
+
+                    if (nm.CreateNode(out netNodeId, ref rand, ni, nodePos, sm.m_currentBuildIndex))
+                    {
+                        sm.m_currentBuildIndex += 1u;
+                    }
+
+                    inNode.NetNodeId = netNodeId;
+                }
+            }
+        }
+
+        public bool FindNode(out InputNode node, Vector2 pos)
+        {
+            short xRound = (short)Math.Round(pos.x);
+
+            if (nodeMap.ContainsKey(xRound))
+            {
+                foreach (InputNode sn in nodeMap[xRound])
+                {
+                    // try to connect with near nodes
+                    var xDiff = Mathf.Abs(sn.position.x - pos.x);
+                    var zDiff = Mathf.Abs(sn.position.y - pos.y);
+                    if (xDiff < 0.5)
+                    {
+                        if (zDiff < 0.5)
+                        {
+                            node = sn;
+                            return true;
+                        }
+                    }
+                    //if (node.nodeCoords[0] == nodeCoords[0])
+                    //    if (node.nodeCoords[1] == nodeCoords[1])
+                    //    {
+                    //        netNodeId = node.nodeId;
+                    //        return true;
+                    //    }
                 }
             }
 
-            UpdateSegments();
+            node = null;
+            return false;
+        }
 
-            panel.SetMessage("GeoSkylines", "Roads import complete.", false);
+        public void DebugRoad()
+        {
+            NetSegment[] segments = nm.m_segments.m_buffer;
+            string msg = "";
+            for (int i = 0; i < segments.Length; i++)
+            {
+                msg = "";
+                var a_seg = segments[i];
+
+                if (a_seg.m_startNode == 0 || a_seg.m_endNode == 0)
+                    continue;
+
+                var segName = nm.GetSegmentName((ushort)i);
+                if (segName == "test")
+                {
+                    var startN = nm.m_nodes.m_buffer[a_seg.m_startNode].m_position;
+                    var endN = nm.m_nodes.m_buffer[a_seg.m_endNode].m_position;
+                    var startD = a_seg.m_startDirection;
+                    var endD = a_seg.m_endDirection;
+                    var angle = Vector3.Angle(startD, -endD);
+                    msg += "StartNode: " + a_seg.m_startNode + "; pos: " + startN.ToString() + "\n";
+                    msg += "EndNode: " + a_seg.m_endNode + "; pos: " + endN.ToString() + "\n";
+                    msg += "StartDir: " + startD.ToString() + "\n";
+                    msg += "EndDir: " + endD.ToString() + "\n";
+                    msg += "Angle: " + angle.ToString() + "\n"; 
+                    var startNEndN = startN - endN;
+                    msg += "StartNode - EndNode: " + startNEndN.ToString() + "\n";
+                    var endNStartN = endN - startN;
+                    msg += "EndNode - StartNode: " + endNStartN.ToString() + "\n";
+                    var startNStartD = startN - startD;
+                    msg += "StartNode - StartDir: " + startNStartD.ToString() + "\n";
+
+                    Vector3 a = Vector3.zero;
+                    Vector3 b = Vector3.zero;
+                    NetSegment.CalculateMiddlePoints(startN, startD, endN, endD, false, false, out a, out b);
+
+                    msg += "ControlA: " + a.ToString() + "\n";
+                    var newStartD = VectorUtils.NormalizeXZ(a - startN);
+                    msg += "newStartD = VectorUtils.NormalizeXZ(a - startN): " + newStartD.ToString() + "\n";
+                    
+                    msg += "ControlB: " + b.ToString() + "\n";          
+                    var newEndD = VectorUtils.NormalizeXZ(endN - b);
+                    msg += "newEndD = VectorUtils.NormalizeXZ(endN - b): " + newEndD.ToString() + "\n";
+
+                    
+
+                    //Vector3 startDirection = VectorUtils.NormalizeXZ(endPos - startPos);
+                    //Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
+                    //Vector3 endDir = VectorUtils.NormalizeXZ(endPos - controlB);
+
+
+                    Debug.Log(msg);
+                }
+            }
+
         }
 
         public void ImportRails()
@@ -462,8 +635,7 @@ namespace GeoSkylines
                     railMapping[r_map_vec[0]] = r_map_vec[1];
                 }
             }
-
-            List<GeoSkylinesRoad> segments = new List<GeoSkylinesRoad>();
+            
             if (!File.Exists("Files/" + impRailsFileName))
             {
                 panel.SetMessage("GeoSkylines", impRailsFileName + " file doesn't exist!", false);
@@ -471,6 +643,9 @@ namespace GeoSkylines
             }
 
             StreamReader sr = File.OpenText("Files/" + impRailsFileName);
+
+            List<InputRoad> rails = new List<InputRoad>();
+            NetInfo ni;
 
             string[] fields;
             sr.ReadLine();
@@ -488,7 +663,7 @@ namespace GeoSkylines
                     var columnValue = fields[i].Replace("\"", "");
                     if (columnName == impRailsGeometryColumn)
                         ProvideCoordsString(out coords, columnValue);
-                    
+
                     if (columnName.ToLower().Contains("type"))
                         railType = columnValue;
 
@@ -503,7 +678,12 @@ namespace GeoSkylines
                 if (coords == "")
                     continue;
 
-                List<float[]> segCoords = new List<float[]>();
+                // get the NetInfo prefab here, skip records that have no mapping    
+                if (!ObtainNetInfo(out ni, railMapping, railType, bridge, ""))
+                    continue;
+
+                // get the vertexes from WKT
+                List<Vector2> segCoords = new List<Vector2>();
                 string[] coords_v = coords.Split(',');
 
                 foreach (var nodeCoords in coords_v)
@@ -518,94 +698,90 @@ namespace GeoSkylines
                     float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
                     if (Math.Abs(xCoord) < impRailsCoordMax && Math.Abs(zCoord) < impRailsCoordMax)
                     {
-                        segCoords.Add(new float[] { xCoord, zCoord });
+                        segCoords.Add(new Vector2(xCoord, zCoord));
                     }
                 }
 
-                GeoSkylinesRoad csRoad = new GeoSkylinesRoad(railId, "", railType, "", 0, bridge, segCoords);
-                segments.Add(csRoad);
+                // fill in NodeMap and set junctions
+                foreach (var segCoord in segCoords)
+                {
+                    if (!FindNode(out InputNode inNode, segCoord))
+                    {                                                                                       
+                        InputNode newNode = new InputNode(segCoord, "", railId);
+                        short xRound = (short)Math.Round(segCoord.x);
+                        if (!nodeMap.ContainsKey(xRound))
+                        {
+                            nodeMap.Add(xRound, new List<InputNode>());
+                        }
+                        nodeMap[xRound].Add(newNode);
+                    }
+                }
+
+                InputRoad inRoad = new InputRoad(railId, "", railType, "", 0, bridge, segCoords, ni);
+                rails.Add(inRoad);
             }
 
             sr.Close();
 
-            NetInfo ni;
-
-            foreach (var segment in segments)
-            {               
-                List<float[]> nodes = segment.roadCoords;
-                string rail_type = segment.roadType;
-
-                ni = PrefabCollection<NetInfo>.FindLoaded("Train Track");
-                string prefab_name = "";
-                if (railMapping.ContainsKey(rail_type))
-                    prefab_name = railMapping[rail_type];
-                if (prefab_name == "")
-                    continue;
-
-                if (segment.bridge)
-                {
-                    string prefab_name_bridge = prefab_name + " Bridge";
-                    if (PrefabCollection<NetInfo>.LoadedExists(prefab_name_bridge))
-                        ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name_bridge);
-                }
-                else 
-                    if (PrefabCollection<NetInfo>.LoadedExists(prefab_name))
-                        ni = PrefabCollection<NetInfo>.FindLoaded(prefab_name);
-
-                for (int i = 0; i < nodes.Count - 1; i++)
-                {
-                    float[] startNodeCoords = nodes[i];
-                    float[] endNodeCoords = nodes[i + 1];
-
-                    if (!FindNode(out ushort startNetNodeId, startNodeCoords))
-                    {
-                        var startNodePos = new Vector3(startNodeCoords[0], 0, startNodeCoords[1]);
-                        float yStart = tm.SampleRawHeightSmoothWithWater(startNodePos, false, 0f);
-                        startNodePos.y = yStart;
-
-                        if (nm.CreateNode(out startNetNodeId, ref rand, ni, startNodePos, sm.m_currentBuildIndex))
-                        {
-                            sm.m_currentBuildIndex += 1u;
-                        }
-
-                        short xRound = (short)Math.Round(startNodeCoords[0]);
-                        if (!nodeMap.ContainsKey(xRound))
-                        {
-                            nodeMap.Add(xRound, new List<SimpleNode>());
-                        }
-                        SimpleNode simpleNode = new SimpleNode(startNetNodeId, startNodePos);
-                        nodeMap[xRound].Add(simpleNode);
-                    }
-
-                    if (!FindNode(out ushort endNetNodeId, endNodeCoords))
-                    {
-                        var endNodePos = new Vector3(endNodeCoords[0], 0, endNodeCoords[1]);
-                        float yStart = tm.SampleRawHeightSmoothWithWater(endNodePos, false, 0f);
-                        endNodePos.y = yStart;
-
-                        if (nm.CreateNode(out endNetNodeId, ref rand, ni, endNodePos, sm.m_currentBuildIndex))
-                        {
-                            sm.m_currentBuildIndex += 1u;
-                        }
-
-                        short xRound = (short)Math.Round(endNodeCoords[0]);
-                        if (!nodeMap.ContainsKey(xRound))
-                        {
-                            nodeMap.Add(xRound, new List<SimpleNode>());
-                        }
-                        SimpleNode simpleNode = new SimpleNode(endNetNodeId, endNodePos);
-                        nodeMap[xRound].Add(simpleNode);
-                    }
-
-                    Vector3 endPos = nm.m_nodes.m_buffer[endNetNodeId].m_position;
-                    Vector3 startPos = nm.m_nodes.m_buffer[startNetNodeId].m_position;
-                    Vector3 startDirection = VectorUtils.NormalizeXZ(endPos - startPos);
-
-                    SimulationManager.instance.AddAction(AddRail(rand, ni, startNetNodeId, endNetNodeId, startDirection));
-                }
+            foreach (var rail in rails)
+            {
+                CreateCSSegments(rail, rail.vertexes);
             }
 
             panel.SetMessage("GeoSkylines", "Rails import complete.", false);
+        }
+
+        public void FixSegments()
+        {
+            RemoveDisconnectedSegments();
+            UpdateSegments();
+        }
+
+        public void RemoveDisconnectedSegments()
+        {
+            for (ushort i = 0; i < nm.m_segments.m_buffer.Length; i++)
+            {
+                var seg = nm.m_segments.m_buffer[i];
+                if (seg.m_startNode == 0 || seg.m_endNode == 0)
+                    continue;
+                var startNode = nm.m_nodes.m_buffer[seg.m_startNode];
+                var endNode = nm.m_nodes.m_buffer[seg.m_endNode];
+                if (startNode.CountSegments() == 1 && endNode.CountSegments() == 1)            
+                    nm.ReleaseSegment(i, false);                                    
+            }
+        }
+
+        public void NodesConnected()
+        {
+            int cntDisconnectedSegs = 0;
+            int cntAllSegs = 0;
+            for (ushort i = 0; i < nm.m_segments.m_buffer.Length; i++)
+            {
+                string msg = "";
+                var seg = nm.m_segments.m_buffer[i];
+                if (seg.m_startNode == 0 || seg.m_endNode == 0)
+                    continue;
+                cntAllSegs++;
+                var startNode = nm.m_nodes.m_buffer[seg.m_startNode];
+                var endNode = nm.m_nodes.m_buffer[seg.m_endNode];
+                if (startNode.CountSegments() == 1 && endNode.CountSegments() == 1)
+                {
+                    cntDisconnectedSegs++;
+                }
+
+                //var startNode = nm.m_nodes.m_buffer[seg.m_startNode];
+                //var endNode = nm.m_nodes.m_buffer[seg.m_endNode];   
+                //var seg_name = nm.GetSegmentName(i);
+                //msg += seg_name + ": " + i;
+                //msg += "\n";
+                //msg += "StartNode.Countsegments(): " + startNode.CountSegments();
+                //msg += "\n";
+                //msg += "EndNode.CountSegments(): " + endNode.CountSegments();
+                //msg += "\n";
+
+                //Debug.Log(msg);
+            }
+            Debug.Log("All segs: " + cntAllSegs + " | Disconnected segs: " + cntDisconnectedSegs);
         }
 
         public void UpdateSegments()
@@ -616,6 +792,36 @@ namespace GeoSkylines
                 if (seg.m_startNode == 0 || seg.m_endNode == 0)
                     continue;
                 nm.UpdateSegment(i);
+            }
+        }
+
+        public void SwitchToTrafficLights()
+        {
+            List<ushort> doneNodes = new List<ushort>();
+            Debug.Log("flags.TrafficLights: " + NetNode.Flags.TrafficLights + " flags.None: " + NetNode.Flags.None);
+            for (ushort i = 0; i < nm.m_segments.m_buffer.Length; i++)
+            {
+                var seg = nm.m_segments.m_buffer[i];
+                if (seg.m_startNode == 0 || seg.m_endNode == 0)
+                    continue;
+
+                if (seg.Info.name != "Basic Road")
+                    continue;
+
+                ushort[] segNodes = { seg.m_startNode, seg.m_endNode };
+                foreach (var nodeId in segNodes)
+                {
+                    if (!doneNodes.Contains(seg.m_startNode))
+                    {
+                        //if ((nm.m_nodes.m_buffer[nodeId].m_flags & NetNode.Flags.Junction) != NetNode.Flags.None)
+                        if (nm.m_nodes.m_buffer[nodeId].CountSegments() > 2)
+                        {
+                            nm.m_nodes.m_buffer[nodeId].m_flags |= NetNode.Flags.TrafficLights;
+                        }
+
+                    }
+                    doneNodes.Add(nodeId);
+                }
             }
         }
 
@@ -1174,8 +1380,42 @@ namespace GeoSkylines
             return isInside;
         }
 
+        public void ImportZonestmp2()
+        {
+            var zoneBlocks = zm.m_blocks.m_buffer;
+            string debugMsg = "";
+            ItemClass.Zone zone = ItemClass.Zone.ResidentialLow;
+
+            for (ushort i = 0; i < zoneBlocks.Length; i++)
+            {
+                var pos = zoneBlocks[i].m_position;
+                if (pos == Vector3.zero)
+                    continue;
+
+                debugMsg += "zoneBlockId: " + i;
+                debugMsg += "\n";
+                int num = (int)((zoneBlocks[i].m_flags & 65280u) >> 8);
+                debugMsg += "num: " + num;
+                debugMsg += "\n";
+                for (int z = 0; z < num; z++)
+                    for (int x = 0; x < 4; x++)
+                    {
+                        debugMsg += "x: " + x + ", z: " + z + " ...";
+                        if (zoneBlocks[i].SetZone(x, z, zone))
+                            debugMsg += "Zone set";
+                        debugMsg += "\n";
+                    }
+                zoneBlocks[i].RefreshZoning(i);
+                //var pixelX = (int)(pos.x / TerrainManager.RAW_CELL_SIZE + 540);
+                //var pixelZ = (int)(pos.z / TerrainManager.RAW_CELL_SIZE + 540);
+                //zoneBlocks[i].ZonesUpdated(i, pixelX - 10, pixelZ - 10, pixelX + 10, pixelZ + 10);
+            }
+            Debug.Log(debugMsg);
+        }
+
+
         // not working!
-        public void ImportZones()
+        public void ImportZonestmp()
         {
             
             var zoneBlocks = zm.m_blocks.m_buffer;
@@ -1209,43 +1449,38 @@ namespace GeoSkylines
                     continue;
 
                 msg += "zoneBlock.m_valid (before SetZone): " + zoneBlock.m_valid;
+                msg += "\n";
+                msg += "zoneBlockId: " + i;
+                msg += "\n";
+                int num = (int)((zoneBlock.m_flags & 65280u) >> 8);
+                msg += "num: " + num;
+                msg += "\n";
+                for (int z = 0; z < num; z++)
+                    for (int x = 0; x < 4; x++)
+                    {
+                        msg += "x: " + x + ", z: " + z + " ...";
+                        if (zoneBlock.SetZone(x, z, zone))
+                            msg += "Zone set";
+                        msg += "\n";
+                    }
+
+                zoneBlock.RefreshZoning(i);
+                msg += "zoneBlock.m_valid (after RefreshingZone): " + zoneBlock.m_valid;
                 msg += "\n";                
-                //msg += "zoneBlock.m_valid (after SetZone): " + zoneBlock.m_valid;
-                //msg += "\n";
-                //debugMsg += "zoneBlockId: " + i;
-                //debugMsg += "\n";
-                //int num = (int)((zoneBlock.m_flags & 65280u) >> 8);
-                //debugMsg += "num: " + num;
-                //debugMsg += "\n";
-                //for (int z = 0; z < num; z++)
-                //    for (int x = 0; x < 4; x++)
-                //    {
-                //        debugMsg += "x: " + x + ", z: " + z + " ...";
-                //        if (zoneBlock.SetZone(x, z, zone))                        
-                //            debugMsg += "Zone set";
-                //        debugMsg += "\n";
-                //    }
 
-                //zoneBlock.RefreshZoning(i);
-                //msg += "zoneBlock.m_valid (after RefreshingZone): " + zoneBlock.m_valid;
-                //msg += "\n";
-                //UpdateZone(zone);
-                //msg += "zoneBlock.m_valid (after UpdateZone): " + zoneBlock.m_valid;
-                //msg += "\n";
-
-                //var pixelX = (int)(pos.x / TerrainManager.RAW_CELL_SIZE + 540);                
+                //var pixelX = (int)(pos.x / TerrainManager.RAW_CELL_SIZE + 540);
                 //var pixelZ = (int)(pos.z / TerrainManager.RAW_CELL_SIZE + 540);
                 //zoneBlock.ZonesUpdated(i, pixelX - 10, pixelZ - 10, pixelX + 10, pixelZ + 10);
-                var valid = zoneBlock.m_valid;
-                ulong num6 = 144680345676153346;
-                for (int index = 0; index < 7; ++index)
-                {
-                    valid = (ulong)((long)valid & ~(long)num6 | (long)valid & (long)valid << 1 & (long)num6);
-                    num6 <<= 1;
-                }
-                zoneBlock.m_valid = valid;
-                msg += "zoneBlock.m_valid (after SetZone): " + zoneBlock.m_valid;
-                msg += "\n";
+                //var valid = zoneBlock.m_valid;
+                //ulong num6 = 144680345676153346;
+                //for (int index = 0; index < 7; ++index)
+                //{
+                //    valid = (ulong)((long)valid & ~(long)num6 | (long)valid & (long)valid << 1 & (long)num6);
+                //    num6 <<= 1;
+                //}
+                //zoneBlock.m_valid = valid;
+                //msg += "zoneBlock.m_valid (after SetZone): " + zoneBlock.m_valid;
+                //msg += "\n";
 
                 Debug.Log(msg);
             }
@@ -1356,8 +1591,8 @@ namespace GeoSkylines
             panel.SetMessage("GeoSkylines", "Services import completed. ", false);
         }
 
-        // this should have been a method to assign zones according to type of building but it setting zones doesn't work for unknown reason
-        public void ImportZones2()
+        // this was an attempt to set zones from buildings but it's not so useful if 95% of buildings are of one type
+        public void ImportZones()
         {
             if (!confloaded)
                 return;
@@ -1371,14 +1606,14 @@ namespace GeoSkylines
             }
 
             Dictionary<string, string> zoneMapping = new Dictionary<string, string>();              
-            if (!File.Exists("Files/" + buildingMatchFileName))
+            if (!File.Exists("Files/" + zoneMatchFileName))
             {
-                panel.SetMessage("GeoSkylines", buildingMatchFileName + " file doesn't exist!", false);
+                panel.SetMessage("GeoSkylines", zoneMatchFileName + " file doesn't exist!", false);
                 return;
             }
             else
             {
-                StreamReader z_map_sr = File.OpenText("Files/" + buildingMatchFileName);
+                StreamReader z_map_sr = File.OpenText("Files/" + zoneMatchFileName);
                 while (!z_map_sr.EndOfStream)
                 {
                     var z_map_vec = CSVParser.Split(z_map_sr.ReadLine());
@@ -1389,12 +1624,12 @@ namespace GeoSkylines
             var zoneBlocks = zm.m_blocks.m_buffer;
             for (ushort i = 0; i < zoneBlocks.Length; i++)
             {
-                var zoneBlock = zoneBlocks[i];
-                var pos = zoneBlock.m_position;
+                //var zoneBlock = zoneBlocks[i];
+                var pos = zoneBlocks[i].m_position;
                 if (pos != Vector3.zero)
                 {
-                    var zoneMapX = pos.x / 120;
-                    var zoneMapZ = pos.z / 120;
+                    int zoneMapX = (int)pos.x / 120;
+                    int zoneMapZ = (int)pos.z / 120;
                     string zoneMapXZ = zoneMapX + "," + zoneMapZ;
                     
                     if (!zoneBlockMap.ContainsKey(zoneMapXZ))
@@ -1405,6 +1640,21 @@ namespace GeoSkylines
                 }
             }
 
+            string msg = "";
+            int tmpCnt = 0;
+            foreach (KeyValuePair<string, List<uint>> an_el in zoneBlockMap)
+            {
+                tmpCnt++;
+                if (tmpCnt > 5)
+                    continue;
+
+                msg += an_el.Key + ": \n";
+                foreach (var blockId in an_el.Value)
+                    msg += blockId + "\n";
+                msg += "***************\n";
+            }
+            //Debug.Log(msg);
+            //Debug.Log("impBuildingsCoordMax: " + impBuildingsCoordMax);
 
             StreamReader sr = File.OpenText("Files/" + impBuildingsFileName);
 
@@ -1424,8 +1674,7 @@ namespace GeoSkylines
                 for (int i = 0; i < impBuildingsColumns.Length; i++)
                 {
                     var columnName = impBuildingsColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
-                    //Debug.Log(columnName + ": " + columnValue);
+                    var columnValue = fields[i].Replace("\"", "");                    
                     if (columnName == impBuildingsGeometryColumn)
                         ProvideCoordsString(out coords, columnValue);
 
@@ -1433,19 +1682,19 @@ namespace GeoSkylines
                         bldType = columnValue;
 
                     else if (columnName.ToLower().Contains("height"))
-                        height = float.Parse(columnValue);
+                        float.TryParse(columnValue, out height);
 
                     else if (columnName.ToLower().Contains("level") && fields[i].Length != 0)
-                        bldLvl = int.Parse(columnValue);
+                        int.TryParse(columnValue, out bldLvl);
 
                     else if (columnName.ToLower().Contains("angle"))
-                        angle = float.Parse(columnValue);
+                        float.TryParse(columnValue, out angle);
 
                     else if (columnName.ToLower().Contains("width"))
-                        width = float.Parse(columnValue);
+                        float.TryParse(columnValue, out width);
 
                     else if (columnName.ToLower() == "id")
-                        bldId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out bldId);
                 }
 
                 if (coords == "")
@@ -1466,6 +1715,8 @@ namespace GeoSkylines
                     buildings.Add(csBld);
                 }
             }
+
+            //Debug.Log("Buildings amount: " + buildings.Count);
 
             sr.Close();
 
@@ -1489,14 +1740,17 @@ namespace GeoSkylines
                 //ItemClass.Zone.ResidentialLow; //2
                 //ItemClass.Zone.Unzoned; //0
 
+                //Debug.Log(building_type);
                 string zone_name = "";
                 if (zoneMapping.ContainsKey(building_type))
                     zone_name = zoneMapping[building_type];
                 if (zone_name == "")
                     continue;
 
-                var zoneMapX = bldPos.x / 120;
-                var zoneMapZ = bldPos.z / 120;
+                //Debug.Log("After zoneMapping!");
+
+                int zoneMapX = (int)bldPos.x / 120;
+                int zoneMapZ = (int)bldPos.z / 120;
                 string zoneMapXZ = zoneMapX + "," + zoneMapZ;
                 if (!zoneBlockMap.ContainsKey(zoneMapXZ))
                 {
@@ -1504,41 +1758,44 @@ namespace GeoSkylines
                     continue;
                 }
 
+                ItemClass.Zone zone = ItemClass.Zone.None;
+                switch (zone_name)
+                {
+                    case "CommercialHigh":
+                        zone = ItemClass.Zone.CommercialHigh;
+                        break;
+                    case "CommercialLow":
+                        zone = ItemClass.Zone.CommercialLow;
+                        break;
+                    case "Industrial":
+                        zone = ItemClass.Zone.Industrial;
+                        break;
+                    case "Office":
+                        zone = ItemClass.Zone.Office;
+                        break;
+                    case "ResidentialHigh":
+                        zone = ItemClass.Zone.ResidentialHigh;
+                        break;
+                    case "ResidentialLow":
+                        zone = ItemClass.Zone.ResidentialLow;
+                        break;
+                }
+
                 foreach (var zoneBlockId in zoneBlockMap[zoneMapXZ])
                 {
-                    var zoneBlock = zm.m_blocks.m_buffer[zoneBlockId];
-                    var blockPos = zoneBlock.m_position;
+                    int num = (int)((zoneBlocks[zoneBlockId].m_flags & 65280u) >> 8);
+                    var blockPos = zoneBlocks[zoneBlockId].m_position;
                     if ((blockPos.x < bldPos.x+5 && blockPos.x > bldPos.x-5) && 
                         (blockPos.z < bldPos.z+5 && blockPos.z > bldPos.z-5))
-                    {                        
-                        for (int x = 0; x < zoneBlock.Distance; x++)
-                            for (int z = 0; z < zoneBlock.RowCount; z++)
+                    {
+                        Debug.Log("XXXXXXXXXXX");
+                        for (int z = 0; z < num; z++)
+                            for (int x = 0; x < 4; x++)
                             {
-                                ItemClass.Zone zone = ItemClass.Zone.None;
-                                switch (zone_name)
-                                {
-                                    case "CommercialHigh":
-                                        zone = ItemClass.Zone.CommercialHigh;
-                                        break;
-                                    case "CommercialLow":
-                                        zone = ItemClass.Zone.CommercialLow;
-                                        break;
-                                    case "Industrial":
-                                        zone = ItemClass.Zone.Industrial;
-                                        break;
-                                    case "Office":
-                                        zone = ItemClass.Zone.Office;
-                                        break;
-                                    case "ResidentialHigh":
-                                        zone = ItemClass.Zone.ResidentialHigh;
-                                        break;
-                                    case "ResidentialLow":
-                                        zone = ItemClass.Zone.ResidentialLow;
-                                        break;
-                                }
-
-                                zoneBlock.SetZone(x, z, zone);
+                                if (zoneBlocks[zoneBlockId].SetZone(x, z, zone))
+                                    Debug.Log("Zone set to: " + zone);
                             }
+                        zoneBlocks[zoneBlockId].RefreshZoning((ushort)zoneBlockId);
                     }
                 }
 
@@ -1553,16 +1810,222 @@ namespace GeoSkylines
 
         }
 
-        private IEnumerator AddRoad(Randomizer rand, NetInfo ni, ushort startNode, ushort endNode, Vector3 startDirection, string street_name)
+        public void ImportZonesArea()
+        {
+            if (!confloaded)
+                return;
+
+            // I will just use buildings to store the points
+            List<GeoSkylinesZone> zones = new List<GeoSkylinesZone>();
+
+            if (!File.Exists("Files/" + impZonesFileName))
+            {
+                panel.SetMessage("GeoSkylines", impZonesFileName + " file doesn't exist!", false);
+                return;
+            }
+
+            Dictionary<string, string> zoneMapping = new Dictionary<string, string>();
+            if (!File.Exists("Files/" + zoneMatchFileName))
+            {
+                panel.SetMessage("GeoSkylines", zoneMatchFileName + " file doesn't exist!", false);
+                return;
+            }
+            else
+            {
+                StreamReader z_map_sr = File.OpenText("Files/" + zoneMatchFileName);
+                while (!z_map_sr.EndOfStream)
+                {
+                    var z_map_vec = CSVParser.Split(z_map_sr.ReadLine());
+                    zoneMapping[z_map_vec[0]] = z_map_vec[1];
+                }
+            }
+
+            var zoneBlocks = zm.m_blocks.m_buffer;
+            for (ushort i = 0; i < zoneBlocks.Length; i++)
+            {
+                //var zoneBlock = zoneBlocks[i];
+                var pos = zoneBlocks[i].m_position;
+                if (pos != Vector3.zero)
+                {
+                    int zoneMapX = (int)pos.x / 120;
+                    int zoneMapZ = (int)pos.z / 120;
+                    string zoneMapXZ = zoneMapX + "," + zoneMapZ;
+
+                    if (!zoneBlockMap.ContainsKey(zoneMapXZ))
+                    {
+                        zoneBlockMap.Add(zoneMapXZ, new List<uint>());
+                    }
+                    zoneBlockMap[zoneMapXZ].Add(i);
+                }
+            }
+
+            StreamReader sr = File.OpenText("Files/" + impZonesFileName);
+
+            string[] fields;
+            sr.ReadLine();
+            while (!sr.EndOfStream)
+            {
+                fields = CSVParser.Split(sr.ReadLine());
+
+                string coords = "";
+                ulong zoneId = 0;
+                string zoneType = "";
+                for (int i = 0; i < impZonesColumns.Length; i++)
+                {
+                    var columnName = impZonesColumns[i];
+                    var columnValue = fields[i].Replace("\"", "");
+                    if (columnName == impZonesGeometryColumn)
+                        ProvideCoordsString(out coords, columnValue);
+
+                    else if (columnName.ToLower() == "zonetype")
+                        zoneType = columnValue;
+
+                    else if (columnName.ToLower() == "id")
+                        ulong.TryParse(columnValue, out zoneId);
+                }
+
+                if (coords == "")
+                    continue;
+
+                //Debug.Log(coords);
+                List<Vector2> zoneNodes = new List<Vector2>();
+                float xMin = 8641;
+                float xMax = -8641;
+                float yMin = 8641;
+                float yMax = -8641;
+
+                string[] separatingChars = { " " };
+                string[] coords_v = coords.Split(',');
+                foreach (var nodeCoords in coords_v)
+                {
+                    string[] nodeCoords_v = nodeCoords.Split(separatingChars, StringSplitOptions.RemoveEmptyEntries);
+                    var lat = double.Parse(nodeCoords_v[latitudePos].Trim());
+                    var lon = double.Parse(nodeCoords_v[longitudePos].Trim());
+                    UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
+                    float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
+                    if (Math.Abs(xCoord) < impZonesCoordMax && Math.Abs(zCoord) < impZonesCoordMax)
+                    {
+                        var pos = new Vector2(xCoord, zCoord);
+                        zoneNodes.Add(pos);
+                        xMin = Mathf.Min(xMin, pos.x);
+                        xMax = Mathf.Max(xMax, pos.x);
+                        yMin = Mathf.Min(yMin, pos.y);
+                        yMax = Mathf.Max(yMax, pos.y);
+                    }
+                }
+                int[] bbox = { (int)xMin, (int)xMax, (int)yMin, (int)yMax };
+                Vector2[] zoneVertices = zoneNodes.ToArray();
+                GeoSkylinesZone csZone = new GeoSkylinesZone(zoneId, zoneType, zoneVertices, bbox);
+                zones.Add(csZone);
+            }
+
+            Debug.Log("Zones amount: " + zones.Count);
+
+            sr.Close();
+
+            BuildingInfo bi;
+
+            foreach (var a_zone in zones)
+            {
+                //ItemClass.Zone.CommercialHigh; //5
+                //ItemClass.Zone.CommercialLow; //4
+                //ItemClass.Zone.Distant; //1
+                //ItemClass.Zone.Industrial; //6
+                //ItemClass.Zone.None; //15
+                //ItemClass.Zone.Office; //7
+                //ItemClass.Zone.ResidentialHigh; //3
+                //ItemClass.Zone.ResidentialLow; //2
+                //ItemClass.Zone.Unzoned; //0
+
+                //Debug.Log(building_type);
+                string zone_name = "";
+                if (zoneMapping.ContainsKey(a_zone.zoneType))
+                    zone_name = zoneMapping[a_zone.zoneType];
+                if (zone_name == "")
+                    continue;
+
+                //Debug.Log(zone_name);
+                int xMin = a_zone.zoneBoundingBox[0];
+                int xMax = a_zone.zoneBoundingBox[1];
+                int yMin = a_zone.zoneBoundingBox[2];
+                int yMax = a_zone.zoneBoundingBox[3];
+                Debug.Log("xMin: " + xMin + ", xMax: " + xMax + ", yMin: " + yMin + ", yMax: " + yMax);
+                for (int i = 0; i < (xMax - xMin); i += 10)
+                    for (int j = 0; j < (yMax = yMin); j += 10)
+                    {
+                        Vector2 pos = new Vector2(xMin + i, yMin + j);
+                        if (IsPointInPolygon(a_zone.zoneVertices, pos))
+                        {
+                            //Debug.Log("IsPointInPolygon");
+                            int zoneMapX = (int)pos.x / 120;
+                            int zoneMapZ = (int)pos.y / 120;
+                            string zoneMapXZ = zoneMapX + "," + zoneMapZ;
+                            if (!zoneBlockMap.ContainsKey(zoneMapXZ))
+                            {
+                                Debug.Log("Not found in zoneBlockMap: " + zoneMapXZ);
+                                continue;
+                            }
+
+                            ItemClass.Zone zone = ItemClass.Zone.None;
+                            switch (zone_name)
+                            {
+                                case "CommercialHigh":
+                                    zone = ItemClass.Zone.CommercialHigh;
+                                    break;
+                                case "CommercialLow":
+                                    zone = ItemClass.Zone.CommercialLow;
+                                    break;
+                                case "Industrial":
+                                    zone = ItemClass.Zone.Industrial;
+                                    break;
+                                case "Office":
+                                    zone = ItemClass.Zone.Office;
+                                    break;
+                                case "ResidentialHigh":
+                                    zone = ItemClass.Zone.ResidentialHigh;
+                                    break;
+                                case "ResidentialLow":
+                                    zone = ItemClass.Zone.ResidentialLow;
+                                    break;
+                            }
+
+                            foreach (var zoneBlockId in zoneBlockMap[zoneMapXZ])
+                            {
+                                int num = (int)((zoneBlocks[zoneBlockId].m_flags & 65280u) >> 8);
+                                var blockPos = zoneBlocks[zoneBlockId].m_position;
+                                if ((blockPos.x < pos.x + 5 && blockPos.x > pos.x - 5) &&
+                                    (blockPos.z < pos.y + 5 && blockPos.z > pos.y - 5))
+                                {                                    
+                                    for (int z = 0; z < num; z++)
+                                        for (int x = 0; x < 4; x++)
+                                        {
+                                            if (zoneBlocks[zoneBlockId].SetZone(x, z, zone))
+                                                Debug.Log("Zone set to: " + zone);
+                                        }
+                                    zoneBlocks[zoneBlockId].RefreshZoning((ushort)zoneBlockId);
+                                    Debug.Log("Zones set for " + zoneBlockId);
+                                }
+                            }
+                        }
+                    }
+            }
+
+            panel.SetMessage("GeoSkylines", "Zones import completed. ", false);
+
+        }
+
+        private IEnumerator AddRoad(Randomizer rand, NetInfo ni, ushort startNode, ushort endNode, Vector3 startDirection, Vector3 endDirection, string street_name)
         {
             ushort segmentId;
             NetManager net_manager = NetManager.instance;            
             try
             {
-                if (net_manager.CreateSegment(out segmentId, ref rand, ni, startNode, endNode, startDirection, -startDirection, Singleton<SimulationManager>.instance.m_currentBuildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, false))
+                if (net_manager.CreateSegment(out segmentId, ref rand, ni, startNode, endNode, startDirection, endDirection, Singleton<SimulationManager>.instance.m_currentBuildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, false))
                 {
                     Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;                    
-                    net_manager.SetSegmentNameImpl(segmentId, street_name);                    
+                    if (street_name != "")
+                        net_manager.SetSegmentNameImpl(segmentId, street_name);                    
                 }
             }
             catch (Exception ex)
@@ -1573,24 +2036,24 @@ namespace GeoSkylines
             yield return null;
         }
 
-        private IEnumerator AddRail(Randomizer rand, NetInfo ni, ushort startNode, ushort endNode, Vector3 startDirection)
-        {
-            ushort segmentId;
-            NetManager net_manager = NetManager.instance;
-            try
-            {
-                if (net_manager.CreateSegment(out segmentId, ref rand, ni, startNode, endNode, startDirection, -startDirection, Singleton<SimulationManager>.instance.m_currentBuildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, false))
-                {
-                    Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
-                }
-            }
-            catch (Exception ex)
-            {
-                //try-catch just to prevent crashing by ignoring invalid trees and letting valid trees get created
-                //RaiseTreeMapperEvent (ex.Message);
-            }
-            yield return null;
-        }
+        //private IEnumerator AddRail(Randomizer rand, NetInfo ni, ushort startNode, ushort endNode, Vector3 startDirection, Vector3 endDirection)
+        //{
+        //    ushort segmentId;
+        //    NetManager net_manager = NetManager.instance;
+        //    try
+        //    {
+        //        if (net_manager.CreateSegment(out segmentId, ref rand, ni, startNode, endNode, startDirection, endDirection, Singleton<SimulationManager>.instance.m_currentBuildIndex, Singleton<SimulationManager>.instance.m_currentBuildIndex, false))
+        //        {
+        //            Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        //try-catch just to prevent crashing by ignoring invalid trees and letting valid trees get created
+        //        //RaiseTreeMapperEvent (ex.Message);
+        //    }
+        //    yield return null;
+        //}
 
         private IEnumerator AddBuilding(BuildingInfo bi, Vector3 bldPos, float angle)
         {

@@ -17,7 +17,6 @@ namespace GeoSkylines
     public class GeoSkylinesThreading : ThreadingExtensionBase
     {
         private bool _processed = false;
-        
 
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
@@ -201,7 +200,7 @@ namespace GeoSkylines
                 _processed = false;
             }
 
-            // import zones
+            //import zones
             if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.Z))
             {
                 if (_processed) return;
@@ -213,7 +212,7 @@ namespace GeoSkylines
                     if (r != 1)
                         return;
                     GeoSkylinesImport imp = new GeoSkylinesImport();
-                    imp.ImportZones();
+                    imp.ImportZonesArea();
                 });
             }
             else
@@ -299,6 +298,71 @@ namespace GeoSkylines
                         return;
                     GeoSkylinesExport exp = new GeoSkylinesExport();
                     exp.ExportTrees();
+                });
+            }
+            else
+            {
+                // not both keys pressed: Reset processed state
+                _processed = false;
+            }
+
+            // node connect
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.F))
+            {
+                if (_processed) return;
+
+                _processed = true;
+
+                ConfirmPanel.ShowModal("Fix segments", "This will remove disconnected segments and then run Update on each segment. Proceed? ", (s, r) =>
+                {
+                    if (r != 1)
+                        return;
+                    GeoSkylinesImport exp = new GeoSkylinesImport();
+                    exp.FixSegments();
+                });
+            }
+            else
+            {
+                // not both keys pressed: Reset processed state
+                _processed = false;
+            }
+
+            // node connect
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.M))
+            {
+                if (_processed) return;
+
+                _processed = true;
+
+                ConfirmPanel.ShowModal("Traffic lights", "Switch all intersections to traffic lights? ", (s, r) =>
+                {
+                    if (r != 1)
+                        return;
+                    GeoSkylinesImport exp = new GeoSkylinesImport();
+                    exp.SwitchToTrafficLights();
+                });
+            }
+            else
+            {
+                // not both keys pressed: Reset processed state
+                _processed = false;
+            }
+
+            // release disconnected segments 
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.N))
+            {
+                if (_processed) return;
+
+                _processed = true;
+
+                ConfirmPanel.ShowModal("Release disconnected segments", "You are about to release disconnected segments. Proceed? ", (s, r) =>
+                {
+                    if (r != 1)
+                        return;
+                    //GeoSkylinesImport exp = new GeoSkylinesImport();
+                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                    imp.DebugRoad();
+                    //exp.RemoveDisconnectedSegments();
                 });
             }
             else
