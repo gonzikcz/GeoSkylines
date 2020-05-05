@@ -258,3 +258,6 @@ ExportCoordsBox:
 
 # Create a playable model in Cities: Skylines (post-processing)
 Calling the GeoSkylines' import methods creates just a geographically accurate base model. However, it has to be manually processed to create a playable model. Sources of water have to be added to the water basins. Connection to a highway has to be created in order for new citizens to move in. The created game objects must be fixed in some cases (e.g. due to bad input GIS data). It is recommended that the post-processing is done by an experienced C: S player. 
+
+# Acknowledgements
+This mod was inspired by another C: S mods, mainly Cimptographer (Mapper). The curved segments in this mod are created with library burningmime.curves. Data from OSM were mainly prepared with library OSMSharp. Big thanks to all these creations and their authors! 
