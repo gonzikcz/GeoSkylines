@@ -15,7 +15,7 @@ namespace GeoSkylines
     public class GeoSkylinesExport
     {
         private Randomizer rand;
-        private Dictionary<short, List<InputNode>> nodeMap = new Dictionary<short, List<InputNode>>();
+        private Dictionary<short, List<GeoSkylinesNode>> nodeMap = new Dictionary<short, List<GeoSkylinesNode>>();
 
         private WGS84_UTM convertor = new WGS84_UTM(null);
         private UTMResult centerUTM;
@@ -949,9 +949,43 @@ namespace GeoSkylines
         public void OutputPrefabInfo()
         {
             string msg = "";
+            
+            NetSegment[] segments = net_manager.m_segments.m_buffer;
+            int segCnt = 0;
+            List<ushort> nodes = new List<ushort>();
+            for (int i = 0; i < segments.Length; i++)
+            {
+                msg = "";
+                var a_seg = segments[i];
 
-            msg += "Node Count: " + net_manager.m_nodeCount + "\n";
-            msg += "Segment Count: " + net_manager.m_segmentCount + "\n";
+                if (a_seg.m_startNode == 0 || a_seg.m_endNode == 0)
+                    continue;
+                segCnt++;
+
+                if (!nodes.Contains(a_seg.m_startNode))
+                    nodes.Add(a_seg.m_startNode);
+                if (!nodes.Contains(a_seg.m_endNode))
+                    nodes.Add(a_seg.m_endNode);
+
+            }
+
+            NetNode[] nodes2 = net_manager.m_nodes.m_buffer;
+            int nodeCnt = 0;
+            for (int i = 0; i < nodes2.Length; i++)
+            {
+                msg = "";
+                var a_node = nodes2[i];
+
+                if ((net_manager.m_nodes.m_buffer[i].m_flags & NetNode.Flags.Created) != NetNode.Flags.None)
+                {
+                    nodeCnt++;                    
+                }                
+            }
+
+            msg += "Node Count: \n";
+            msg += "m_nodeCount: " + net_manager.m_nodeCount + "; From Segs: " + nodes.Count + "; From iter: " + nodeCnt + "\n";
+            msg += "Segment Count: \n"; 
+            msg += "m_segmentCount: " + net_manager.m_segmentCount + "; From iter: " + segCnt + "\n";
             msg += "\n";
 
             msg += "TreeInfo: ";

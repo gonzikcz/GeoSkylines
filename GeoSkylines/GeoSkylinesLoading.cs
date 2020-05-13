@@ -11,11 +11,10 @@ using ColossalFramework.Plugins;
 using ColossalFramework.IO;
 using System.Collections;
 using System.Threading;
-using burningmime.curves;
 
 namespace GeoSkylines
 {   
-    public class InputNode
+    public class GeoSkylinesNode
     {
         public int NetNodeId = -1;
         public Vector2 position;
@@ -23,7 +22,7 @@ namespace GeoSkylines
         public List<ulong> roadIds = new List<ulong>();
         public List<string> roadNames = new List<string>();
 
-        public InputNode(Vector2 pos, string roadName, ulong roadId)
+        public GeoSkylinesNode(Vector2 pos, string roadName, ulong roadId)
         {
             position = pos;
             roadIds.Add(roadId);
@@ -36,7 +35,7 @@ namespace GeoSkylines
         }
     }
 
-    public class InputRoad
+    public class GeoSkylinesRoad
     {
         private TerrainManager tm = TerrainManager.instance;
         public ulong roadId;
@@ -45,11 +44,11 @@ namespace GeoSkylines
         public string oneWay;
         public int lanes;
         public List<Vector2> vertexes;
-        public List<InputSegment> segments = new List<InputSegment>();
+        public List<GeoSkylinesSegment> segments = new List<GeoSkylinesSegment>();
         public bool bridge;
         public NetInfo netInfo;
 
-        public InputRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<Vector2> vertexes, NetInfo ni)
+        public GeoSkylinesRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<Vector2> vertexes, NetInfo ni)
         {
             this.roadId = roadId;            
             this.roadName = roadName;
@@ -64,15 +63,15 @@ namespace GeoSkylines
             {
                 var startNode = vertexes[i];
                 var endNode = vertexes[i + 1];
-                InputSegment segment = new InputSegment(this, i, startNode, Vector3.zero, Vector3.zero, endNode);
+                GeoSkylinesSegment segment = new GeoSkylinesSegment(this, i, startNode, Vector3.zero, Vector3.zero, endNode);
                 segments.Add(segment);
             }
         }
     }
 
-    public class InputSegment
+    public class GeoSkylinesSegment
     {
-        public InputRoad road;
+        public GeoSkylinesRoad road;
         public string segId;
         public Vector2 startNode;
         public Vector2 endNode;
@@ -82,7 +81,7 @@ namespace GeoSkylines
         public float length;
         public Vector2[] buffer;
 
-        public InputSegment(InputRoad road, int numSegRoad, Vector2 startNodePos, Vector2 controlA, Vector2 controlB, Vector2 endNodePos)
+        public GeoSkylinesSegment(GeoSkylinesRoad road, int numSegRoad, Vector2 startNodePos, Vector2 controlA, Vector2 controlB, Vector2 endNodePos)
         {
             this.road = road;
             segId = road.roadId + "-" + numSegRoad;
@@ -95,7 +94,7 @@ namespace GeoSkylines
             int buffer = 10;
             this.controlA = controlA;
             this.controlB = controlB;
-            length = VectorUtils.LengthXZ(endNodePos - startNodePos);
+            length = VectorUtils.LengthXY(endNodePos - startNodePos);
             List<Vector2> bufferPoints = new List<Vector2>();
 
             //Dictionary<int, Vector2> startBufferPoints = new Dictionary<int, Vector2>();
@@ -260,12 +259,27 @@ namespace GeoSkylines
         public Vector2[] zoneVertices;
         public int[] zoneBoundingBox;
 
-        public GeoSkylinesZone(ulong zoneId, string zoneType, Vector2[] zoneVertices, int[] zoneBoundingBox)
+        public GeoSkylinesZone(ulong zoneId, string zoneType, Vector2[] zoneVertices)
         {
             this.zoneId = zoneId;
             this.zoneType = zoneType;
             this.zoneVertices = zoneVertices;
-            this.zoneBoundingBox = zoneBoundingBox;
+            //this.zoneBoundingBox = zoneBoundingBox;
+
+            float xMin = 8641;
+            float xMax = -8641;
+            float yMin = 8641;
+            float yMax = -8641;
+
+            foreach (var pos in zoneVertices)
+            {
+                xMin = Mathf.Min(xMin, pos.x);
+                xMax = Mathf.Max(xMax, pos.x);
+                yMin = Mathf.Min(yMin, pos.y);
+                yMax = Mathf.Max(yMax, pos.y);
+            }
+
+            zoneBoundingBox = new int[] { (int)xMin-1, (int)xMax+1, (int)yMin-1, (int)yMax+1 };
         }
     }
 

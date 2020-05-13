@@ -21,13 +21,13 @@ namespace GeoSkylines
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
             // getting game area coordinates and WGS84 latitude and longitude
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.Mouse0))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Mouse0))
             {
                 if (_processed) return;
 
                 _processed = true;
 
-                GeoSkylinesExport.DisplayLLOnMouseClick();
+                GeoSkylinesExport.DisplayLLOnMouseClick();                
             }
             else
             {
@@ -35,7 +35,7 @@ namespace GeoSkylines
             }
 
             // output prefab information to a log file (c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\) 
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.P))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.P))
             {
                 if (_processed) return;
 
@@ -55,7 +55,7 @@ namespace GeoSkylines
             }
 
             // Import of services 
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.S))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.S))
             {
                 if (_processed) return;
 
@@ -75,7 +75,7 @@ namespace GeoSkylines
             }
 
             // import of railway
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.L))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.L))
             {
                 if (_processed) return;
 
@@ -96,7 +96,7 @@ namespace GeoSkylines
             }
 
             // import of roads
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.R))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.R))
             { 
                 if (_processed) return;
 
@@ -117,7 +117,7 @@ namespace GeoSkylines
             }
 
             // import of standing water basins
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.W))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.W))
             {
                 if (_processed) return;
 
@@ -138,7 +138,7 @@ namespace GeoSkylines
             }
 
             // import water way basins
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.Q))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Q))
             {
                 if (_processed) return;
 
@@ -159,7 +159,7 @@ namespace GeoSkylines
             }
 
             // import trees from raster
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.T))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.T))
             {
                 if (_processed) return;
 
@@ -180,7 +180,7 @@ namespace GeoSkylines
             }
 
             // import trees from vector
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.V))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.V))
             {
                 if (_processed) return;
 
@@ -201,13 +201,13 @@ namespace GeoSkylines
             }
 
             //import zones
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.Z))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Z))
             {
                 if (_processed) return;
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import zones", "You are about to set zones (from building data). Proceed? ", (s, r) =>
+                ConfirmPanel.ShowModal("Import zones", "You are about to set zones (from areas). Proceed? ", (s, r) =>
                 {
                     if (r != 1)
                         return;
@@ -222,7 +222,7 @@ namespace GeoSkylines
             }
 
             // export roads
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.G))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.G))
             {
                 if (_processed) return;
 
@@ -244,7 +244,7 @@ namespace GeoSkylines
             }
 
             // export buildings
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.H))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.H))
             {
                 if (_processed) return;
 
@@ -265,7 +265,7 @@ namespace GeoSkylines
             }
 
             // export zones
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.J))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.J))
             {
                 if (_processed) return;
 
@@ -286,7 +286,7 @@ namespace GeoSkylines
             }
 
             // export trees
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.K))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.K))
             {
                 if (_processed) return;
 
@@ -307,7 +307,7 @@ namespace GeoSkylines
             }
 
             // node connect
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.F))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.F))
             {
                 if (_processed) return;
 
@@ -328,7 +328,7 @@ namespace GeoSkylines
             }
 
             // node connect
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.M))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.M))
             {
                 if (_processed) return;
 
@@ -349,13 +349,13 @@ namespace GeoSkylines
             }
 
             // release disconnected segments 
-            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKey(KeyCode.N))
+            if (Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.N))
             {
                 if (_processed) return;
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Release disconnected segments", "You are about to release disconnected segments. Proceed? ", (s, r) =>
+                ConfirmPanel.ShowModal("Debug Roads", "Debug roads. Proceed? ", (s, r) =>
                 {
                     if (r != 1)
                         return;

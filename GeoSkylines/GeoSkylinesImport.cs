@@ -11,6 +11,7 @@ using ColossalFramework.Math;
 using ColossalFramework;
 using System.Text.RegularExpressions;
 using burningmime.curves;
+using UnityStandardAssets.ImageEffects;
 //using System.Drawing;
 
 namespace GeoSkylines
@@ -19,7 +20,7 @@ namespace GeoSkylines
     {
         private Randomizer rand;
         private System.Random sysRand = new System.Random();
-        private Dictionary<short, List<InputNode>> nodeMap = new Dictionary<short, List<InputNode>>();
+        private Dictionary<short, List<GeoSkylinesNode>> nodeMap = new Dictionary<short, List<GeoSkylinesNode>>();
         private Dictionary<string, List<uint>> zoneBlockMap = new Dictionary<string, List<uint>>();        
 
         private BuildingManager bm = BuildingManager.instance;
@@ -258,7 +259,7 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/" + impRoadsFileName);
 
-            List<InputRoad> roads = new List<InputRoad>();
+            List<GeoSkylinesRoad> roads = new List<GeoSkylinesRoad>();
             NetInfo ni;
 
             string[] fields;
@@ -344,17 +345,55 @@ namespace GeoSkylines
                     var lon = double.Parse(nodeCoords_v[longitudePos].Trim());
                     UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
                     float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
-                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);                    
                     if (Math.Abs(xCoord) < impRoadsCoordMax && Math.Abs(zCoord) < impRoadsCoordMax)
                     {
-                        segCoords.Add(new Vector2(xCoord, zCoord));
+                        var pos = new Vector2(xCoord, zCoord);
+                        if (segCoords.Count > 0)
+                        {
+                            var prevP = segCoords[segCoords.Count - 1];
+                            var len = VectorUtils.LengthXY(pos-prevP);                            
+                            if (len > 88)
+                            {
+                                var div = (int)len / 90;
+                                div++;
+
+                                string msg = "";
+                                msg += "Start: " + prevP.ToString() + "\n";
+                                msg += "End : " + pos.ToString() + "\n";
+                                msg += "Length: " + len + "\n";
+                                msg += "Div: " + div + "\n"; 
+
+                                var xDiff = pos.x - prevP.x;
+                                var yDiff = pos.y - prevP.y;
+                                float xDiffStep = xDiff / div;
+                                float yDiffStep = yDiff / div;
+                                float newX = prevP.x;                                
+                                float newY = prevP.y;
+                                for (int i = 0; i < div; i++)
+                                {
+                                    newX = newX + xDiffStep;
+                                    newY = newY + yDiffStep;
+                                    var newPos = new Vector2(newX, newY);
+                                    msg += "NewPos: " + newPos.ToString() + "\n";
+                                    segCoords.Add(newPos);
+                                }
+                                //Debug.Log(msg);
+                            }
+                            else
+                                segCoords.Add(pos);
+                        }
+                        else
+                            segCoords.Add(pos);
+                        //segCoords.Add(pos);
+
                     }
                 }
 
                 // fill in NodeMap and set junctions
                 foreach (var segCoord in segCoords)
                 {
-                    if (FindNode(out InputNode inNode, segCoord))
+                    if (FindNode(out GeoSkylinesNode inNode, segCoord))
                     {
                         inNode.SetJunction();
                         inNode.roadIds.Add(roadId);
@@ -362,57 +401,57 @@ namespace GeoSkylines
                     }
                     else
                     {
-                        InputNode newNode = new InputNode(segCoord, streetName, roadId);
+                        GeoSkylinesNode newNode = new GeoSkylinesNode(segCoord, streetName, roadId);
                         short xRound = (short)Math.Round(segCoord.x);
                         if (!nodeMap.ContainsKey(xRound))
                         {
-                            nodeMap.Add(xRound, new List<InputNode>());
+                            nodeMap.Add(xRound, new List<GeoSkylinesNode>());
                         }
                         nodeMap[xRound].Add(newNode);
                     }
                 }    
 
-                InputRoad inRoad = new InputRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni);
+                GeoSkylinesRoad inRoad = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni);
                 roads.Add(inRoad);
             }
 
-            //string msg = "Junctions: \n";
-            //foreach (KeyValuePair<short, List<InputNode>> tmpNodes in nodeMap)
-            //    foreach (var n in tmpNodes.Value)
-            //        if (n.junction)
-            //        {
-            //            msg += "RoadIds: ";
-            //            foreach (var rId in n.roadIds)
-            //                msg += rId + "; ";
-            //            msg += "| RoadNames: ";
-            //            foreach (var rN in n.roadNames)
-            //                msg += rN + "; "; 
-
-            //            msg += n.position.ToString() + "\n";
-            //        }    
-            //Debug.Log(msg);
-            //msg = "";
-
             sr.Close();
 
-            // I need to preserve junctions, otherwise using Bezier curves (big reduction in nodes)            
+            // I need to preserve junctions, otherwise using Bezier curves (big reduction in nodes)   
+            // I'm also trying to avoid creating too long segments (111 seems to be the game's max segment length before it starts glitching)
             foreach (var road in roads)
             {
                 List<Vector2> tmpPoss = new List<Vector2>();
+                float totalLen = 0;
+                bool firstSeg = true;
+                int cnt = 0;
                 foreach (var seg in road.segments)
                 {
-                    foreach (var pos in seg.vertexes)
+                    cnt++;
+                    totalLen += seg.length;                    
+                    // would adding another segment be too long?
+                    if (totalLen > 104)
+                    {                        
+                        CreateCSSegments(road, tmpPoss);
+                        tmpPoss = new List<Vector2>();
+                        totalLen = seg.length;
+                        firstSeg = true;
+                    }
+
+                    if (firstSeg)
                     {
-                        tmpPoss.Add(pos);
-                        
-                        if (tmpPoss.Count == 1)
-                            continue;
-                        
-                        if (FindNode(out InputNode inNode, pos) && inNode.junction)
-                        {
-                            CreateCSSegments(road, tmpPoss);
-                            tmpPoss = new List<Vector2>();
-                        }
+                        tmpPoss.Add(seg.startNode);
+                        firstSeg = false;
+                    }
+                    
+                    tmpPoss.Add(seg.endNode);
+
+                    if (FindNode(out GeoSkylinesNode inNode, seg.endNode) && inNode.junction)
+                    {
+                        CreateCSSegments(road, tmpPoss);
+                        tmpPoss = new List<Vector2>();
+                        totalLen = 0;
+                        firstSeg = true;
                     }
                 }
                 CreateCSSegments(road, tmpPoss);
@@ -452,7 +491,7 @@ namespace GeoSkylines
             return true;
         }
 
-        public void CreateCSSegments(InputRoad road, List<Vector2> nodes)
+        public void CreateCSSegments(GeoSkylinesRoad road, List<Vector2> nodes)
         {
             if (nodes.Count < 2)
                 return;
@@ -466,7 +505,7 @@ namespace GeoSkylines
                 Vector3 startPos = nm.m_nodes.m_buffer[startNetNodeId].m_position;
                 Vector3 startDir = VectorUtils.NormalizeXZ(endPos - startPos);
                 Vector3 endDir = -startDir;
-                   
+
                 SimulationManager.instance.AddAction(AddRoad(rand, road.netInfo, startNetNodeId, endNetNodeId, startDir, endDir, road.roadName));
                 
                 //Debug.Log("Straight: " + road.roadName + " - " + road.roadId); 
@@ -493,7 +532,7 @@ namespace GeoSkylines
                     controlB.y = tmpY;
                     Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
                     Vector3 endDir = -VectorUtils.NormalizeXZ(endPos - controlB);
-                        
+
                     SimulationManager.instance.AddAction(AddRoad(rand, road.netInfo, startNetNodeId, endNetNodeId, startDir, endDir, road.roadName));
 
                     //Debug.Log("Curve: " + road.roadName + " - " + road.roadId);
@@ -505,7 +544,7 @@ namespace GeoSkylines
         {
             netNodeId = 0;
 
-            if (FindNode(out InputNode inNode, pos))
+            if (FindNode(out GeoSkylinesNode inNode, pos))
             {
                 if (inNode.NetNodeId != -1)
                     netNodeId = (ushort)inNode.NetNodeId;
@@ -525,13 +564,13 @@ namespace GeoSkylines
             }
         }
 
-        public bool FindNode(out InputNode node, Vector2 pos)
+        public bool FindNode(out GeoSkylinesNode node, Vector2 pos)
         {
             short xRound = (short)Math.Round(pos.x);
 
             if (nodeMap.ContainsKey(xRound))
             {
-                foreach (InputNode sn in nodeMap[xRound])
+                foreach (GeoSkylinesNode sn in nodeMap[xRound])
                 {
                     // try to connect with near nodes
                     var xDiff = Mathf.Abs(sn.position.x - pos.x);
@@ -570,46 +609,50 @@ namespace GeoSkylines
                     continue;
 
                 var segName = nm.GetSegmentName((ushort)i);
-                if (segName == "test")
-                {
-                    var startN = nm.m_nodes.m_buffer[a_seg.m_startNode].m_position;
-                    var endN = nm.m_nodes.m_buffer[a_seg.m_endNode].m_position;
-                    var startD = a_seg.m_startDirection;
-                    var endD = a_seg.m_endDirection;
-                    var angle = Vector3.Angle(startD, -endD);
-                    msg += "StartNode: " + a_seg.m_startNode + "; pos: " + startN.ToString() + "\n";
-                    msg += "EndNode: " + a_seg.m_endNode + "; pos: " + endN.ToString() + "\n";
-                    msg += "StartDir: " + startD.ToString() + "\n";
-                    msg += "EndDir: " + endD.ToString() + "\n";
-                    msg += "Angle: " + angle.ToString() + "\n"; 
-                    var startNEndN = startN - endN;
-                    msg += "StartNode - EndNode: " + startNEndN.ToString() + "\n";
-                    var endNStartN = endN - startN;
-                    msg += "EndNode - StartNode: " + endNStartN.ToString() + "\n";
-                    var startNStartD = startN - startD;
-                    msg += "StartNode - StartDir: " + startNStartD.ToString() + "\n";
+                //if (segName == "test")
+                //{
+                var startN = nm.m_nodes.m_buffer[a_seg.m_startNode].m_position;
+                var endN = nm.m_nodes.m_buffer[a_seg.m_endNode].m_position;
+                //var startD = a_seg.m_startDirection;
+                //var endD = a_seg.m_endDirection;
+                //var angle = Vector3.Angle(startD, -endD);
+                //msg += "StartNode: " + a_seg.m_startNode + "; pos: " + startN.ToString() + "\n";
+                //msg += "EndNode: " + a_seg.m_endNode + "; pos: " + endN.ToString() + "\n";
+                //msg += "StartDir: " + startD.ToString() + "\n";
+                //msg += "EndDir: " + endD.ToString() + "\n";
+                //msg += "Angle: " + angle.ToString() + "\n"; 
+                //var startNEndN = startN - endN;
+                //msg += "StartNode - EndNode: " + startNEndN.ToString() + "\n";
+                //var endNStartN = endN - startN;
+                //msg += "EndNode - StartNode: " + endNStartN.ToString() + "\n";
+                //var startNStartD = startN - startD;
+                //msg += "StartNode - StartDir: " + startNStartD.ToString() + "\n";
 
-                    Vector3 a = Vector3.zero;
-                    Vector3 b = Vector3.zero;
-                    NetSegment.CalculateMiddlePoints(startN, startD, endN, endD, false, false, out a, out b);
+                //Vector3 a = Vector3.zero;
+                //Vector3 b = Vector3.zero;
+                //NetSegment.CalculateMiddlePoints(startN, startD, endN, endD, false, false, out a, out b);
 
-                    msg += "ControlA: " + a.ToString() + "\n";
-                    var newStartD = VectorUtils.NormalizeXZ(a - startN);
-                    msg += "newStartD = VectorUtils.NormalizeXZ(a - startN): " + newStartD.ToString() + "\n";
-                    
-                    msg += "ControlB: " + b.ToString() + "\n";          
-                    var newEndD = VectorUtils.NormalizeXZ(endN - b);
-                    msg += "newEndD = VectorUtils.NormalizeXZ(endN - b): " + newEndD.ToString() + "\n";
+                //msg += "ControlA: " + a.ToString() + "\n";
+                //var newStartD = VectorUtils.NormalizeXZ(a - startN);
+                //msg += "newStartD = VectorUtils.NormalizeXZ(a - startN): " + newStartD.ToString() + "\n";
 
-                    
-
-                    //Vector3 startDirection = VectorUtils.NormalizeXZ(endPos - startPos);
-                    //Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
-                    //Vector3 endDir = VectorUtils.NormalizeXZ(endPos - controlB);
+                //msg += "ControlB: " + b.ToString() + "\n";          
+                //var newEndD = VectorUtils.NormalizeXZ(endN - b);
+                //msg += "newEndD = VectorUtils.NormalizeXZ(endN - b): " + newEndD.ToString() + "\n";
 
 
-                    Debug.Log(msg);
-                }
+
+                //Vector3 startDirection = VectorUtils.NormalizeXZ(endPos - startPos);
+                //Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
+                //Vector3 endDir = VectorUtils.NormalizeXZ(endPos - controlB);
+
+                msg += "NetInfo: " + a_seg.Info + "\n";
+                msg += "Road Name: " + segName + "\n";
+                var len = VectorUtils.LengthXZ(endN - startN);
+                msg += "Length: " + len;
+
+                Debug.Log(msg);
+                // }
             }
 
         }
@@ -644,7 +687,7 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/" + impRailsFileName);
 
-            List<InputRoad> rails = new List<InputRoad>();
+            List<GeoSkylinesRoad> rails = new List<GeoSkylinesRoad>();
             NetInfo ni;
 
             string[] fields;
@@ -702,22 +745,22 @@ namespace GeoSkylines
                     }
                 }
 
-                // fill in NodeMap and set junctions
+                // fill in NodeMap
                 foreach (var segCoord in segCoords)
                 {
-                    if (!FindNode(out InputNode inNode, segCoord))
-                    {                                                                                       
-                        InputNode newNode = new InputNode(segCoord, "", railId);
+                    if (!FindNode(out GeoSkylinesNode inNode, segCoord))
+                    {
+                        GeoSkylinesNode newNode = new GeoSkylinesNode(segCoord, "", railId);
                         short xRound = (short)Math.Round(segCoord.x);
                         if (!nodeMap.ContainsKey(xRound))
                         {
-                            nodeMap.Add(xRound, new List<InputNode>());
+                            nodeMap.Add(xRound, new List<GeoSkylinesNode>());
                         }
                         nodeMap[xRound].Add(newNode);
                     }
                 }
 
-                InputRoad inRoad = new InputRoad(railId, "", railType, "", 0, bridge, segCoords, ni);
+                GeoSkylinesRoad inRoad = new GeoSkylinesRoad(railId, "", railType, "", 0, bridge, segCoords, ni);
                 rails.Add(inRoad);
             }
 
@@ -725,7 +768,11 @@ namespace GeoSkylines
 
             foreach (var rail in rails)
             {
-                CreateCSSegments(rail, rail.vertexes);
+                foreach (var seg in rail.segments)
+                {
+                    CreateCSSegments(rail, seg.vertexes.ToList());
+                }
+                
             }
 
             panel.SetMessage("GeoSkylines", "Rails import complete.", false);
@@ -1200,8 +1247,7 @@ namespace GeoSkylines
 
                     var diffX = endPos.x - startPos.x;
                     var diffZ = endPos.z - startPos.z;
-                    var dist = Math.Sqrt(diffX * diffX + diffZ * diffZ);
-                    //float dist = VectorUtils.LengthXZ(endPos - startPos);                    
+                    float dist = VectorUtils.LengthXZ(endPos - startPos);                    
 
                     int step = 5;
                     if (dist > step)
@@ -1815,7 +1861,6 @@ namespace GeoSkylines
             if (!confloaded)
                 return;
 
-            // I will just use buildings to store the points
             List<GeoSkylinesZone> zones = new List<GeoSkylinesZone>();
 
             if (!File.Exists("Files/" + impZonesFileName))
@@ -1889,10 +1934,6 @@ namespace GeoSkylines
 
                 //Debug.Log(coords);
                 List<Vector2> zoneNodes = new List<Vector2>();
-                float xMin = 8641;
-                float xMax = -8641;
-                float yMin = 8641;
-                float yMax = -8641;
 
                 string[] separatingChars = { " " };
                 string[] coords_v = coords.Split(',');
@@ -1908,23 +1949,15 @@ namespace GeoSkylines
                     {
                         var pos = new Vector2(xCoord, zCoord);
                         zoneNodes.Add(pos);
-                        xMin = Mathf.Min(xMin, pos.x);
-                        xMax = Mathf.Max(xMax, pos.x);
-                        yMin = Mathf.Min(yMin, pos.y);
-                        yMax = Mathf.Max(yMax, pos.y);
                     }
                 }
-                int[] bbox = { (int)xMin, (int)xMax, (int)yMin, (int)yMax };
-                Vector2[] zoneVertices = zoneNodes.ToArray();
-                GeoSkylinesZone csZone = new GeoSkylinesZone(zoneId, zoneType, zoneVertices, bbox);
+                GeoSkylinesZone csZone = new GeoSkylinesZone(zoneId, zoneType, zoneNodes.ToArray());
                 zones.Add(csZone);
             }
 
             Debug.Log("Zones amount: " + zones.Count);
 
             sr.Close();
-
-            BuildingInfo bi;
 
             foreach (var a_zone in zones)
             {
@@ -1945,6 +1978,29 @@ namespace GeoSkylines
                 if (zone_name == "")
                     continue;
 
+                ItemClass.Zone zone = ItemClass.Zone.None;
+                switch (zone_name)
+                {
+                    case "CommercialHigh":
+                        zone = ItemClass.Zone.CommercialHigh;
+                        break;
+                    case "CommercialLow":
+                        zone = ItemClass.Zone.CommercialLow;
+                        break;
+                    case "Industrial":
+                        zone = ItemClass.Zone.Industrial;
+                        break;
+                    case "Office":
+                        zone = ItemClass.Zone.Office;
+                        break;
+                    case "ResidentialHigh":
+                        zone = ItemClass.Zone.ResidentialHigh;
+                        break;
+                    case "ResidentialLow":
+                        zone = ItemClass.Zone.ResidentialLow;
+                        break;
+                }
+
                 //Debug.Log(zone_name);
                 int xMin = a_zone.zoneBoundingBox[0];
                 int xMax = a_zone.zoneBoundingBox[1];
@@ -1952,12 +2008,11 @@ namespace GeoSkylines
                 int yMax = a_zone.zoneBoundingBox[3];
                 Debug.Log("xMin: " + xMin + ", xMax: " + xMax + ", yMin: " + yMin + ", yMax: " + yMax);
                 for (int i = 0; i < (xMax - xMin); i += 10)
-                    for (int j = 0; j < (yMax = yMin); j += 10)
+                    for (int j = 0; j < (yMax - yMin); j += 10)
                     {
                         Vector2 pos = new Vector2(xMin + i, yMin + j);
                         if (IsPointInPolygon(a_zone.zoneVertices, pos))
                         {
-                            //Debug.Log("IsPointInPolygon");
                             int zoneMapX = (int)pos.x / 120;
                             int zoneMapZ = (int)pos.y / 120;
                             string zoneMapXZ = zoneMapX + "," + zoneMapZ;
@@ -1965,29 +2020,6 @@ namespace GeoSkylines
                             {
                                 Debug.Log("Not found in zoneBlockMap: " + zoneMapXZ);
                                 continue;
-                            }
-
-                            ItemClass.Zone zone = ItemClass.Zone.None;
-                            switch (zone_name)
-                            {
-                                case "CommercialHigh":
-                                    zone = ItemClass.Zone.CommercialHigh;
-                                    break;
-                                case "CommercialLow":
-                                    zone = ItemClass.Zone.CommercialLow;
-                                    break;
-                                case "Industrial":
-                                    zone = ItemClass.Zone.Industrial;
-                                    break;
-                                case "Office":
-                                    zone = ItemClass.Zone.Office;
-                                    break;
-                                case "ResidentialHigh":
-                                    zone = ItemClass.Zone.ResidentialHigh;
-                                    break;
-                                case "ResidentialLow":
-                                    zone = ItemClass.Zone.ResidentialLow;
-                                    break;
                             }
 
                             foreach (var zoneBlockId in zoneBlockMap[zoneMapXZ])
@@ -2025,7 +2057,8 @@ namespace GeoSkylines
                 {
                     Singleton<SimulationManager>.instance.m_currentBuildIndex += 2u;                    
                     if (street_name != "")
-                        net_manager.SetSegmentNameImpl(segmentId, street_name);                    
+                        net_manager.SetSegmentNameImpl(segmentId, street_name);
+
                 }
             }
             catch (Exception ex)
@@ -2105,5 +2138,21 @@ namespace GeoSkylines
             if (coords.Contains("\""))
                 coords = coords.Replace("\"", "");
         }
+
+        //public float  Distance(Vector2 start, Vector2 end)
+        //{
+        //    var diffX = end.x - start.x;
+        //    var diffY = end.y - start.y;
+        //    var length = Math.Sqrt((diffX * diffX) + (diffY * diffY));
+        //    return (float)length;
+        //}
+
+        //public float Distance(Vector3 start, Vector3 end)
+        //{
+        //    var diffX = end.x - start.x;
+        //    var diffY = end.z - start.z;
+        //    var length = Math.Sqrt((diffX * diffX) + (diffY * diffY));
+        //    return (float)length;
+        //}
     }
 }
