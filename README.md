@@ -8,7 +8,7 @@ Install game mod (if not on Steam workshop):
 - copy the GeoSkylines.dll file to newly created folder GeoSkylines
 - in game, go to Content Manager > Mods > turn on GeoSkylines
 
-GeoSkylines methods are called using the threading hooks via hotkeys, combination of Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conflicts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. 
+GeoSkylines methods are called using the threading hooks via hotkeys, combination of (ONLY RIGHT!) Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conflicts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. (Though this has been limited now to right Ctrl)
 
 Three stages of creating playable model in Cities: Skylines based on geodata:
 1. Prepare geodata for import
