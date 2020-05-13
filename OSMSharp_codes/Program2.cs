@@ -14,6 +14,8 @@ using OsmSharp.Geo;
 //using Sample.GeometryStream.Staging;
 using System.Text.RegularExpressions;
 using System.Drawing;
+using System.Numerics;
+using burningmime.curves;
 
 namespace OSMtest
 {
@@ -31,6 +33,12 @@ namespace OSMtest
         //const double centerLon = 17.2478128875718;
         //const double centerLat = 49.5887050728419;
 
+        //Brussels
+        const string basePath = @"c:\data\CS\Brusel\";
+        const string fileName = "map";
+        const double centerLon = 4.372754;
+        const double centerLat = 50.849591;
+
         //Mikulasovice
         //const string basePath = @"h:\Documents\from_school_pc\school\thesis\1praxe\Cities_skyline\Mikulasovice\";
         //const string fileName = "map.osm";
@@ -38,10 +46,10 @@ namespace OSMtest
         //const double centerLat = 50.9662515;
 
         //Svit
-        const string basePath = @"h:\Documents\from_school_pc\school\thesis\1praxe\Cities_skyline\Svit_17km\";
-        const string fileName = "map.osm";
-        const double centerLon = 20.1857094521613;
-        const double centerLat = 49.063148018262;
+        //const string basePath = @"h:\Documents\from_school_pc\school\thesis\1praxe\Cities_skyline\Svit_17km\";
+        //const string fileName = "map.osm";
+        //const double centerLon = 20.1857094521613;
+        //const double centerLat = 49.063148018262;
 
         static void Main(string[] args)
         {
@@ -114,6 +122,11 @@ namespace OSMtest
 
             //TestTrig();
 
+            //TestBufferSeg();
+
+            //TestCurves();
+
+            WgsBbox();
 
         }
 
@@ -149,9 +162,13 @@ namespace OSMtest
 
             //wholeFileTxt += "Id, Road Name, Road Type, Geometry";
             //wholeFileTxt += "\n";
+            foreach (var feature in lineStrings)
+            {
+                // just loop over all
+            }
 
-            // build feature collection.
-            //var featureCollection = new FeatureCollection();            
+                // build feature collection.
+                //var featureCollection = new FeatureCollection();            
             foreach (var feature in lineStrings)
             {
                 //Console.WriteLine(feature.Geometry);                
@@ -183,10 +200,15 @@ namespace OSMtest
                 {
                     bridge = feature.Attributes["bridge"].ToString();
                 }
+                string id = "";
+                if (feature.Attributes.Exists("id"))
+                {
+                    id = feature.Attributes["id"].ToString();
+                }
 
                 //wholeFileTxt += string.Format("{0},{1},{2},{3}", feature.Attributes["id"], roadName, roadType, geomTxt);
                 //wholeFileTxt += "\n";
-                txtLines.Add(string.Format("{0},{1},{2},{3},{4},{5},{6}", feature.Attributes["id"], roadName, roadType, oneWay, lanes, bridge, geomTxt));
+                txtLines.Add(string.Format("{0},{1},{2},{3},{4},{5},{6}", id, roadName, roadType, oneWay, lanes, bridge, geomTxt));
             }
 
             //int i = 0;
@@ -998,8 +1020,341 @@ namespace OSMtest
 
         }
 
+        static void TestBufferSeg()
+        {
+            WGS84_UTM convertor = new WGS84_UTM(null);
+            UTMResult centerUTM = convertor.convertLatLngToUtm(centerLat, centerLon);
+            Regex CSVParser = new Regex(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))");
+            string csv_path = @"c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\roads_rwo.csv";
+            StreamReader sr = File.OpenText(csv_path);
+            sr.ReadLine();
+            while (!sr.EndOfStream)
+            {
+                string[] fields = CSVParser.Split(sr.ReadLine());
+
+                string coords = "";
+                for (int i = 0; i < fields.Length; i++)
+                {
+                    var columnValue = fields[i].Replace("\"", "");                    
+                    if (i == 0)
+                        ProvideCoordsString(out coords, columnValue);
+                }
+                if (coords == "")
+                    continue;
+                
+                List<float[]> segCoords = new List<float[]>();
+                string[] coords_v = coords.Split(',');
+
+                foreach (var nodeCoords in coords_v)
+                {
+                    string[] separatingChars = { " " };
+                    string[] nodeCoords_v = nodeCoords.Split(separatingChars, StringSplitOptions.RemoveEmptyEntries);
+
+                    var lat = double.Parse(nodeCoords_v[1].Trim());
+                    var lon = double.Parse(nodeCoords_v[0].Trim());
+                    UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
+                    float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
+                    segCoords.Add(new float [] { xCoord, zCoord});
+                }
+
+                int buffer = 5;
+                
+                int cnt = 0;
+                for (int i = 0; i < fields.Length-1; i+=2)
+                {
+                    var startNode = segCoords[i];
+                    var endNode = segCoords[i + 1];
+                    Console.WriteLine("StartX: " + startNode[0] + "; StartY: " + startNode[1]);
+                    Console.WriteLine("EndX: " + endNode[0] + "; EndY: " + endNode[1]);
+
+                    var length = Length(startNode, endNode);
+                    Console.WriteLine("Length: " + length);
+                    
+                    List<float[]> bufferPoints = new List<float[]>();
+
+                    Dictionary<int, float[]> startBufferPoints = new Dictionary<int, float[]>();
+                    startBufferPoints.Add(1, new float[] { startNode[0] - buffer, startNode[1] + buffer });
+                    startBufferPoints.Add(2, new float[] { startNode[0] + buffer, startNode[1] + buffer });
+                    startBufferPoints.Add(3, new float[] { startNode[0] + buffer, startNode[1] - buffer });
+                    startBufferPoints.Add(4, new float[] { startNode[0] - buffer, startNode[1] - buffer });
+
+                    Dictionary<int, float[]> endBufferPoints = new Dictionary<int, float[]>();
+                    endBufferPoints.Add(1, new float[] { endNode[0] - buffer, endNode[1] + buffer });
+                    endBufferPoints.Add(2, new float[] { endNode[0] + buffer, endNode[1] + buffer });
+                    endBufferPoints.Add(3, new float[] { endNode[0] + buffer, endNode[1] - buffer });
+                    endBufferPoints.Add(4, new float[] { endNode[0] - buffer, endNode[1] - buffer });
+
+                    VertexLoop vertLoop = new VertexLoop(4);
+                    float shortest = 9999;
+                    Dictionary<float, List<int>> distPointIndexes = new Dictionary<float, List<int>>();
+                    foreach (KeyValuePair<int, float[]> tmpPoint in startBufferPoints)
+                    {
+                        float tmpDist = Length(endNode, tmpPoint.Value);
+                        if (!distPointIndexes.ContainsKey(tmpDist))
+                            distPointIndexes.Add(tmpDist, new List<int>());
+                        if (tmpDist <= shortest)
+                        {
+                            shortest = tmpDist;
+                            distPointIndexes[shortest].Add(tmpPoint.Key);
+                        }
+                    }
+
+                    Console.WriteLine("Shortest: " + shortest);
+                    foreach (KeyValuePair<float, List<int>> distInd in distPointIndexes)
+                        Console.WriteLine("Dist: " + distInd.Key + " ; Indexes: " + distInd.Value.Count);
+
+                    int startInd = 0;
+                    var pointIndexes = distPointIndexes[shortest];
+                    if (pointIndexes.Count == 1)
+                    {
+                        startInd = vertLoop.NextVertex(pointIndexes[0]);
+                    }
+                    else if (pointIndexes.Count == 2)
+                    {
+                        int l = 9;
+                        int h = 0;
+                        foreach (var ind in pointIndexes)
+                        {
+                            l = Math.Min(l, ind);
+                            h = Math.Max(h, ind);
+                        }
+                        if (h - l > 2)
+                            h = l;
+                        startInd = vertLoop.NextVertex(h);
+                    }
+
+                    shortest = 9999;
+                    distPointIndexes = new Dictionary<float, List<int>>();
+                    foreach (KeyValuePair<int, float[]> tmpPoint in endBufferPoints)
+                    {
+                        float tmpDist = Length(startNode, tmpPoint.Value);
+                        if (!distPointIndexes.ContainsKey(tmpDist))
+                            distPointIndexes.Add(tmpDist, new List<int>());
+                        if (tmpDist <= shortest)
+                        {
+                            shortest = tmpDist;
+                            distPointIndexes[shortest].Add(tmpPoint.Key);
+                        }
+                    }
+
+                    int connectInd = 0;
+                    pointIndexes = distPointIndexes[shortest];
+                    if (pointIndexes.Count == 1)
+                    {
+                        connectInd = vertLoop.NextVertex(pointIndexes[0]);
+                    }
+                    else if (pointIndexes.Count == 2)
+                    {
+                        int l = 9;
+                        int h = 0;
+                        foreach (var ind in pointIndexes)
+                        {
+                            l = Math.Min(l, ind);
+                            h = Math.Max(h, ind);
+                        }
+                        if (h - l > 2)
+                            h = l;
+                        connectInd = vertLoop.NextVertex(h);
+                    }
+
+                    for (int j = 0; j < 4 - pointIndexes.Count; j++)
+                    {
+                        var tmpInd = startInd;
+                        for (int k = 0; k < j; k++)
+                            tmpInd = vertLoop.NextVertex(tmpInd);
+                        bufferPoints.Add(startBufferPoints[tmpInd]);
+                    }
+
+                    for (int j = 0; j < 4 - pointIndexes.Count; j++)
+                    {
+                        var tmpInd = connectInd;
+                        for (int k = 0; k < j; k++)
+                            tmpInd = vertLoop.NextVertex(tmpInd);
+                        bufferPoints.Add(endBufferPoints[tmpInd]);
+                    }
+
+                    bufferPoints.Add(startBufferPoints[startInd]);
+                    string msg = "";
+                    foreach (var p in bufferPoints)
+                    {
+                        msg += p[0] + ", " + p[1] + "\n";
+                    }
+
+                    Console.WriteLine(msg);
+                    Console.WriteLine("---------------");
+
+                    cnt++;
+                    if (cnt > 10)
+                        break;
+                }
+
+            }
+
+
+         }
+
+        static float Length(float[] start, float[] end)
+        {
+            var startX = start[0];
+            var startY = start[1];
+            var endX = end[0];
+            var endY = end[1];
+
+            var diffX = endX - startX;
+            var diffY = endY - startY;
+            var length = Math.Sqrt((diffX * diffX) + (diffY * diffY));
+            return (float)length;
+        }
+
+        static void TestCurves()
+        {
+            string filePath = "c:/data/CS/Olomouc/roads_rwo_small.csv";
+            StreamReader sr = File.OpenText(filePath);
+            sr.ReadLine();
+
+            Regex CSVParser = new Regex(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))");
+
+            WGS84_UTM convertor = new WGS84_UTM(null);
+            UTMResult centerUTM = convertor.convertLatLngToUtm(centerLat, centerLon);
+
+            int cnt = 0;
+
+            string[] fields;
+            while (!sr.EndOfStream)
+            {
+                cnt++;
+                if (cnt > 20)
+                    break;
+
+                fields = CSVParser.Split(sr.ReadLine());
+
+                string coords = "";
+                string streetName = "";
+                ulong roadId = 0;
+
+                ProvideCoordsString(out coords, fields[0].Replace("\"", ""));
+                streetName = fields[2].Replace("\"", "");
+
+                roadId = ulong.Parse(fields[1].Replace("\"", ""));
+
+                if (coords == "")
+                    continue;
+
+                List<Vector2> segCoords = new List<Vector2>();
+                string[] coords_v = coords.Split(',');
+
+                foreach (var nodeCoords in coords_v)
+                {
+                    string[] separatingChars = { " " };
+                    string[] nodeCoords_v = nodeCoords.Split(separatingChars, StringSplitOptions.RemoveEmptyEntries);
+
+                    var lat = double.Parse(nodeCoords_v[1].Trim());
+                    var lon = double.Parse(nodeCoords_v[0].Trim());
+                    UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
+                    float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
+                    if (Math.Abs(xCoord) < 8640 && Math.Abs(zCoord) < 8640)
+                    {
+                        segCoords.Add(new Vector2(xCoord, zCoord));
+                    }
+                }
+
+                List<Vector2> reduced = CurvePreprocess.RdpReduce(segCoords, 2);
+                CubicBezier[] curves = CurveFit.Fit(reduced, 8);                
+
+                Console.WriteLine("RoadName: " + streetName + "; RoadID: " + roadId);
+                Console.WriteLine("Vertexes: ");
+                foreach (var vec in segCoords)
+                    Console.Write(vec.ToString() + "; ");
+                Console.WriteLine();
+                Console.WriteLine("reduced: " + reduced.Count + "; curves: " + curves.Length);
+                Console.WriteLine("Reduced: ");
+                foreach (var red in reduced)
+                    Console.Write(red.ToString() + "; ");
+                Console.WriteLine();
+                Console.WriteLine("BezCurves: ");
+                foreach (var curve in curves)
+                    Console.Write(curve.ToString() + "; ");
+                Console.WriteLine();
+            }
+            Console.Read();
+        }
+
+        static void WgsBbox()
+        {
+            WGS84_UTM convertor = new WGS84_UTM(null);
+            UTMResult utmMid = convertor.convertLatLngToUtm(centerLat, centerLon);
+            Console.WriteLine("Centre LON: " + centerLon);
+            Console.WriteLine("Centre LAT: " + centerLat);
+            Console.WriteLine();
+
+            var maxLat = centerLat;
+            var minLat = centerLat;
+            var maxLon = centerLon;
+            var minLon = centerLon;
+
+            List<LatLng> edgePoints = new List<LatLng>();
+
+            LatLng point1 = convertor.convertUtmToLatLng(utmMid.Easting + 8640, utmMid.Northing + 8640, utmMid.ZoneNumber, "N");
+            edgePoints.Add(point1);
+            LatLng point2 = convertor.convertUtmToLatLng(utmMid.Easting + 8640, utmMid.Northing - 8640, utmMid.ZoneNumber, "N");
+            edgePoints.Add(point2);
+            LatLng point3 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing + 8640, utmMid.ZoneNumber, "N");
+            edgePoints.Add(point3);
+            LatLng point4 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing - 8640, utmMid.ZoneNumber, "N");
+            edgePoints.Add(point4);
+
+            Console.WriteLine("LON      LAT");
+            foreach (var point in edgePoints)
+            {
+                Console.WriteLine(point.Lng + " " + point.Lat);
+                maxLat = Math.Max(maxLat, point.Lat);
+                minLat = Math.Min(minLat, point.Lat);
+                maxLon = Math.Max(maxLon, point.Lng);
+                minLon = Math.Min(minLon, point.Lng);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Min Lon: " + minLon);
+            Console.WriteLine("Max Lon: " + maxLon);
+            Console.WriteLine("Min Lat: " + minLat);
+            Console.WriteLine("Max Lat: " + maxLat);
+            Console.WriteLine();
+
+            Console.WriteLine(maxLon + "," + maxLat + "," + minLon + "," + minLat);
+
+            Console.ReadLine();
+
+        }
+
     }
 
+    public class VertexLoop
+    {
+        public int num_of_vertexes;
+
+        public VertexLoop(int num_of_vertexes)
+        {
+            this.num_of_vertexes = num_of_vertexes;
+        }
+
+        public int NextVertex(int vertex)
+        {
+            int nextVertex = vertex + 1;
+            if (nextVertex > 4)
+                nextVertex -= 4;
+            return nextVertex;
+        }
+
+        public int PreviousVertex(int vertex)
+        {
+            int prevVertex = vertex - 1;
+            if (prevVertex < 1)
+                prevVertex += 4;
+            return prevVertex;
+        }
+    }
 
 
     public static class Download
