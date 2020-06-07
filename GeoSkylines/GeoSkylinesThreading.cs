@@ -41,7 +41,7 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Output Prefab info", "Do you want to output Prefab info? ", (s, r) =>
+                ConfirmPanel.ShowModal("GeoSkylines: Output Prefab info", "Do you want to output Prefab info? ", (s, r) =>
                 {
                     if (r != 1)
                         return;
@@ -61,11 +61,13 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import Services", "You are about to import services. Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("service");
+                ConfirmPanel.ShowModal("GeoSkylines: Import Services", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                        return;                    
                     imp.ImportServices();
                 });
             }
@@ -81,11 +83,13 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import RailWays", "You are about to import railways. Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("rail");
+                ConfirmPanel.ShowModal("GeoSkylines: Import RailWays", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                        return;                    
                     imp.ImportRails();
                 });
             }
@@ -102,11 +106,14 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import roads", "You are about to import roads. Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("road");
+                ConfirmPanel.ShowModal("GeoSkylines: Import roads", msg, (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                    
                     imp.ImportRoads();
                 });
             }
@@ -123,12 +130,14 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Dig water reservoirs", "You are about to dig water reservoirs. Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("water2");
+                ConfirmPanel.ShowModal("GeoSkylines: Dig water reservoirs", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
-                    imp.ImportWaterBody();
+                        return;                    
+                    imp.ImportWaterReservoirs();
                 });
             }
             else
@@ -144,11 +153,13 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Dig waterways", "You are about to dig waterways. Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("water1");
+                ConfirmPanel.ShowModal("GeoSkylines: Dig waterways", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                        return;                    
                     imp.ImportWaterWay();
                 });
             }
@@ -165,11 +176,13 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import trees", "You are about to import trees (from raster data). Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("tree1");
+                ConfirmPanel.ShowModal("GeoSkylines: Import trees (raster)", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                        return;                    
                     imp.ImportTreesRaster();
                 });
             }
@@ -186,11 +199,13 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import trees", "You are about to import trees (from vector data). Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("tree2");
+                ConfirmPanel.ShowModal("GeoSkylines: Import trees (vector)", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                        return;                    
                     imp.ImportTreesVector();
                 });
             }
@@ -207,11 +222,14 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Import zones", "You are about to set zones (from areas). Proceed? ", (s, r) =>
+                GeoSkylinesImport imp = new GeoSkylinesImport();
+                string msg = "Parameters: \n";
+                msg += imp.OutputConfiguration("zone");
+                ConfirmPanel.ShowModal("GeoSkylines: Import zones", msg, (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                    
                     imp.ImportZonesArea();
                 });
             }
@@ -228,11 +246,14 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Export roads", "You are about to export roads. Proceed? ", (s, r) =>
+                GeoSkylinesExport exp = new GeoSkylinesExport();
+                string msg = "Parameters: \n";
+                msg += exp.OutputConfiguration();
+
+                ConfirmPanel.ShowModal("GeoSkylines: Export roads", msg, (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesExport exp = new GeoSkylinesExport();
                     exp.ExportSegments();
                 });
 
@@ -250,11 +271,14 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Export buildings", "You are about to export buildings. Proceed? ", (s, r) =>
+                GeoSkylinesExport exp = new GeoSkylinesExport();
+                string msg = "Parameters: \n";
+                msg += exp.OutputConfiguration();
+
+                ConfirmPanel.ShowModal("GeoSkylines: Export buildings", msg, (s, r) =>
                 {
                     if (r != 1)
-                        return;
-                    GeoSkylinesExport exp = new GeoSkylinesExport();
+                        return;                    
                     exp.ExportBuildings();
                 });
             }
@@ -271,11 +295,15 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Export zones", "You are about to export zones. Proceed? ", (s, r) =>
+                GeoSkylinesExport exp = new GeoSkylinesExport();
+                string msg = "Parameters: \n";
+                msg += exp.OutputConfiguration();
+
+                ConfirmPanel.ShowModal("GeoSkylines: Export zones", msg, (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesExport exp = new GeoSkylinesExport();
+                    
                     exp.ExportZones();
                 });
             }
@@ -292,11 +320,15 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Export trees", "You are about to export trees. Proceed? ", (s, r) =>
+                GeoSkylinesExport exp = new GeoSkylinesExport();
+                string msg = "Parameters: \n";
+                msg += exp.OutputConfiguration();
+
+                ConfirmPanel.ShowModal("GeoSkylines: Export trees", msg, (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesExport exp = new GeoSkylinesExport();
+                    
                     exp.ExportTrees();
                 });
             }
@@ -313,12 +345,12 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Fix segments", "This will remove disconnected segments and then run Update on each segment. Proceed? ", (s, r) =>
+                ConfirmPanel.ShowModal("GeoSkylines: Fix segments", "This will remove disconnected segments and then run Update on each segment. Proceed? ", (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesImport exp = new GeoSkylinesImport();
-                    exp.FixSegments();
+                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                    imp.FixSegments();
                 });
             }
             else
@@ -334,12 +366,12 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Traffic lights", "Switch all intersections to traffic lights? ", (s, r) =>
+                ConfirmPanel.ShowModal("GeoSkylines: Traffic lights", "Switch all intersections to traffic lights? ", (s, r) =>
                 {
                     if (r != 1)
                         return;
-                    GeoSkylinesImport exp = new GeoSkylinesImport();
-                    exp.SwitchToTrafficLights();
+                    GeoSkylinesImport imp = new GeoSkylinesImport();
+                    imp.ImportRoadNames();
                 });
             }
             else
@@ -355,7 +387,7 @@ namespace GeoSkylines
 
                 _processed = true;
 
-                ConfirmPanel.ShowModal("Debug Roads", "Debug roads. Proceed? ", (s, r) =>
+                ConfirmPanel.ShowModal("GeoSkylines: Debug Roads", "Debug roads. Proceed? ", (s, r) =>
                 {
                     if (r != 1)
                         return;

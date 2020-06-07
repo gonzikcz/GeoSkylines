@@ -37,7 +37,7 @@ namespace GeoSkylines
         private string impBuildingsFileName = "buildings_rwo.csv";
         private string buildingMatchFileName = "rwo_cs_building_match.csv";
         private string impZonesFileName = "zones_rwo.csv";
-        private string zoneMatchFileName = "rwo_cs_zone_match.csv";
+        private string zoneMappingFileName = "rwo_cs_zone_match.csv";
         private string impTreesRasterFileName = "trees.png";
         private string impTreesVectorFileName = "trees_rwo.csv";
         private string impWaterWayFileName = "waterway_rwo.csv";
@@ -51,43 +51,27 @@ namespace GeoSkylines
 
         private WGS84_UTM convertor = new WGS84_UTM(null);
         private UTMResult centerUTM;
+        private string mapName;
         private double centerLat;
         private double centerLon;
         private ushort latitudePos;
         private ushort longitudePos;
-        private string[] impRoadsColumns;
-        private string impRoadsGeometryColumn;
         private ushort impRoadsCoordMax;
-        private string[] impRailsColumns;
-        private string impRailsGeometryColumn;
         private ushort impRailsCoordMax;        
-        private string[] impBuildingsColumns;
-        private string impBuildingsGeometryColumn;
         private ushort impBuildingsCoordMax;
-        private string[] impZonesColumns;
-        private string impZonesGeometryColumn;
         private ushort impZonesCoordMax;
         private ushort impTreesRasterOffTolerance;
         private int density = 1;
-        private string[] impTreesVectorColumns;
-        private string impTreesVectorGeometryColumn;
         private string[] impTreesTreeTypes;
-        private int treeTypesLength;
         private TreeInfo[] treeTypes;
         private ushort impTreesRasterOffsetX;
         private ushort impTreesRasterOffsetY;
         private int impTreesRasterMultiply;
         private ushort impTreesCoordMax;
-        private string[] impWaterWayColumns;
-        private string impWaterWayGeometryColumn;
         private string[] impWaterWayTypes;
         private string[] impWaterWayDepths;
         private string[] impWaterWayWidths;
-        private string[] impWaterColumns;
-        private string impWaterGeometryColumn;
         private ushort impWaterDepth;
-        private string[] impServicesColumns;
-        private string impServicesGeometryColumn;
 
         private ExceptionPanel panel = UIView.library.ShowModal<ExceptionPanel>("ExceptionPanel");
         private bool confloaded;
@@ -130,52 +114,41 @@ namespace GeoSkylines
                 var val = a_conf.Value;
                 var key = a_conf.Key;
 
-                if (key == "CenterLatitude")
+                if (key == "MapName")
+                    mapName = val;
+                else if (key == "CenterLatitude")
                     double.TryParse(val, out centerLat);
                 else if (key == "CenterLongitude")
                     double.TryParse(val, out centerLon);
                 else if (key == "LatitudePosition")
                     ushort.TryParse(val, out latitudePos);
-                else if (key == "ImportRoadsColumns")
-                    impRoadsColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportRoadsGeometryColumn")
-                    impRoadsGeometryColumn = val.Trim() ?? "Geometry";
-                else if (key == "ImportRailsColumns")
-                    impRailsColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportRailsGeometryColumn")
-                    impRailsGeometryColumn = val.Trim() ?? "Geometry";
-                else if (key == "ImportBuildingsColumns")
-                    impBuildingsColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportBuildingsGeometryColumn")
-                    impBuildingsGeometryColumn = val.Trim() ?? "Geometry";
-                else if (key == "ImportZonesColumns")
-                    impZonesColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportZonesGeometryColumn")
-                    impZonesGeometryColumn = val.Trim() ?? "Geometry";
-                else if (key == "ImportServicesColumns")
-                    impServicesColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportServicesGeometryColumn")
-                    impServicesGeometryColumn = val.Trim() ?? "Geometry";
                 else if (key == "ImportTreesRasterOffTolerance")
                     ushort.TryParse(val, out impTreesRasterOffTolerance);
-                else if (key == "ImportTreesVectorColumns")
-                    impTreesVectorColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportTreesVectorGeometryColumn")
-                    impTreesVectorGeometryColumn = val.Trim() ?? "Geometry";
                 else if (key == "ImportTreesTreeTypes")
                 {
-                    impTreesTreeTypes = val.Split(',').Select(p => p.Trim()).ToArray();
-                    treeTypesLength = Math.Max(3, impTreesTreeTypes.Length);
-                    treeTypes = new TreeInfo[treeTypesLength];
-
-                    int treeInfoId;
-                    for (int i = 0; i < treeTypesLength; i++)
+                    Dictionary<string, uint> prefab_name_number = new Dictionary<string, uint>();
+                    var prefabCnt = PrefabCollection<TreeInfo>.LoadedCount();
+                    for (uint i = 0; i < prefabCnt; i++)
                     {
-                        treeTypes[i] = PrefabCollection<TreeInfo>.GetLoaded((uint)i);
-                        int.TryParse(impTreesTreeTypes[i], out treeInfoId);
-                        if (treeInfoId != 0)
-                            treeTypes[i] = PrefabCollection<TreeInfo>.GetLoaded((uint)treeInfoId);
+                        var prefab = PrefabCollection<TreeInfo>.GetPrefab(i);
+                        prefab_name_number[prefab.name] = i;
                     }
+
+                    impTreesTreeTypes = val.Split(',').Select(p => p.Trim()).ToArray();
+                    List<TreeInfo> l_treeTypes = new List<TreeInfo>();
+
+                    foreach (var prefName in impTreesTreeTypes)
+                    {
+                        if (prefab_name_number.ContainsKey(prefName))
+                            l_treeTypes.Add(PrefabCollection<TreeInfo>.GetLoaded(prefab_name_number[prefName]));
+                    }
+
+                    if (l_treeTypes.Count == 0)
+                    {
+                        l_treeTypes.Add(PrefabCollection<TreeInfo>.GetLoaded(0));
+                    }
+
+                    treeTypes = l_treeTypes.ToArray();
                 }
                 else if (key == "ImportTreesRasterOffsetX")
                     ushort.TryParse(val, out impTreesRasterOffsetX);
@@ -183,20 +156,12 @@ namespace GeoSkylines
                     ushort.TryParse(val, out impTreesRasterOffsetY);
                 else if (key == "ImportTreesRasterMultiply")
                     int.TryParse(val, out impTreesRasterMultiply);
-                else if (key == "ImportWaterWayColumns")
-                    impWaterWayColumns = val.Split(',').Select(p => p.Trim()).ToArray();
-                else if (key == "ImportWaterWayGeometryColumn")
-                    impWaterWayGeometryColumn = val.Trim() ?? "Geometry";
                 else if (key == "ImportWaterWayTypes")
                     impWaterWayTypes = val.Split(',').Select(p => p.Trim()).ToArray();
                 else if (key == "ImportWaterWayDepths")
                     impWaterWayDepths = val.Split(',');
                 else if (key == "ImportWaterWayWidths")
                     impWaterWayWidths = val.Split(',');
-                else if (key == "ImportWaterGeometryColumn")
-                    impWaterGeometryColumn = val.Trim() ?? "Geometry";
-                else if (key == "ImportWaterColumns")
-                    impWaterColumns = val.Split(',').Select(p => p.Trim()).ToArray();
                 else if (key == "ImportWaterDepth")
                     ushort.TryParse(val, out impWaterDepth);
                 else if (key == "ImportRoadsCoordMax")
@@ -262,8 +227,9 @@ namespace GeoSkylines
             List<GeoSkylinesRoad> roads = new List<GeoSkylinesRoad>();
             NetInfo ni;
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+                
             ushort cntNoName = 1;
             ushort bridges = 0;
             while (!sr.EndOfStream)
@@ -277,22 +243,22 @@ namespace GeoSkylines
                 ulong roadId = 0;
                 string roadType = "";
                 bool bridge = false;
-                for (int i = 0; i < impRoadsColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impRoadsColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                                        
                     //Debug.Log(columnName + ": " + columnValue);
-                    if (columnName == impRoadsGeometryColumn)
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    if (columnName.ToLower().Contains("one way"))
+                    if (columnName == "one_way")
                     {
                         oneWay = columnValue;
                         if (oneWay.Length == 0)
                             oneWay = "no";
                     }
 
-                    if (columnName.ToLower().Contains("lane"))
+                    if (columnName == "lanes")
                         if (columnValue.Length > 0)
                         {
                             //Debug.Log(fields[i] + " - " + columnValue);
@@ -300,7 +266,7 @@ namespace GeoSkylines
                         }
 
 
-                    if (columnName.ToLower().Contains("name"))
+                    if (columnName == "road_name")
                     {
                         streetName = columnValue;
                         if (streetName.Length == 0)
@@ -310,13 +276,13 @@ namespace GeoSkylines
                         }
                     }
 
-                    if (columnName.ToLower() == "id")
+                    if (columnName == "id")
                         roadId = ulong.Parse(columnValue);
 
-                    if (columnName.ToLower().Contains("type"))
+                    if (columnName == "road_type")
                         roadType = columnValue;
 
-                    if (columnName.ToLower().Contains("bridge"))
+                    if (columnName == "bridge")
                         if (columnValue != "")
                         {
                             bridge = true;
@@ -345,7 +311,7 @@ namespace GeoSkylines
                     var lon = double.Parse(nodeCoords_v[longitudePos].Trim());
                     UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
                     float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
-                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);                    
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
                     if (Math.Abs(xCoord) < impRoadsCoordMax && Math.Abs(zCoord) < impRoadsCoordMax)
                     {
                         var pos = new Vector2(xCoord, zCoord);
@@ -358,12 +324,6 @@ namespace GeoSkylines
                                 var div = (int)len / 90;
                                 div++;
 
-                                string msg = "";
-                                msg += "Start: " + prevP.ToString() + "\n";
-                                msg += "End : " + pos.ToString() + "\n";
-                                msg += "Length: " + len + "\n";
-                                msg += "Div: " + div + "\n"; 
-
                                 var xDiff = pos.x - prevP.x;
                                 var yDiff = pos.y - prevP.y;
                                 float xDiffStep = xDiff / div;
@@ -375,19 +335,27 @@ namespace GeoSkylines
                                     newX = newX + xDiffStep;
                                     newY = newY + yDiffStep;
                                     var newPos = new Vector2(newX, newY);
-                                    msg += "NewPos: " + newPos.ToString() + "\n";
                                     segCoords.Add(newPos);
                                 }
-                                //Debug.Log(msg);
                             }
                             else
                                 segCoords.Add(pos);
                         }
                         else
                             segCoords.Add(pos);
-                        //segCoords.Add(pos);
 
                     }
+                }
+                
+                var coordsCnt = segCoords.Count;
+                if (coordsCnt == 0)
+                    continue; // geometry was out of coordMax
+
+                // find roundabouts and make them into one ways                    
+                if (segCoords[0] == segCoords[coordsCnt - 1])
+                {                    
+                    oneWay = "yes";
+                    ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay);
                 }
 
                 // fill in NodeMap and set junctions
@@ -411,8 +379,8 @@ namespace GeoSkylines
                     }
                 }    
 
-                GeoSkylinesRoad inRoad = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni);
-                roads.Add(inRoad);
+                GeoSkylinesRoad road = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni, 0);
+                roads.Add(road);
             }
 
             sr.Close();
@@ -525,11 +493,9 @@ namespace GeoSkylines
                     Vector3 startPos = nm.m_nodes.m_buffer[startNetNodeId].m_position;
 
                     var controlA = new Vector3(curve.p1.x, 0, curve.p1.y);
-                    float tmpY = tm.SampleRawHeightSmoothWithWater(controlA, false, 0f);
-                    controlA.y = tmpY;
+                    controlA.y = tm.SampleRawHeightSmoothWithWater(controlA, false, 0f);
                     var controlB = new Vector3(curve.p2.x, 0, curve.p2.y);
-                    tmpY = tm.SampleRawHeightSmoothWithWater(controlB, false, 0f);
-                    controlB.y = tmpY;
+                    controlB.y = tm.SampleRawHeightSmoothWithWater(controlB, false, 0f);
                     Vector3 startDir = VectorUtils.NormalizeXZ(controlA - startPos);
                     Vector3 endDir = -VectorUtils.NormalizeXZ(endPos - controlB);
 
@@ -550,9 +516,8 @@ namespace GeoSkylines
                     netNodeId = (ushort)inNode.NetNodeId;
                 else
                 {
-                    var nodePos = new Vector3(inNode.position.x, 0, inNode.position.y);
-                    float y = tm.SampleRawHeightSmoothWithWater(nodePos, false, 0f);
-                    nodePos.y = y;
+                    var nodePos = new Vector3(inNode.position.x, 0, inNode.position.y); 
+                    nodePos.y = tm.SampleRawHeightSmoothWithWater(nodePos, false, 0f);
 
                     if (nm.CreateNode(out netNodeId, ref rand, ni, nodePos, sm.m_currentBuildIndex))
                     {
@@ -594,6 +559,143 @@ namespace GeoSkylines
 
             node = null;
             return false;
+        }
+
+        public void ImportRoadNames()
+        {
+            if (!confloaded)
+                return;
+
+            Debug.Log(DateTime.Now.ToString("h:mm:ss tt"));
+
+            if (!File.Exists("Files/" + impRoadsFileName))
+            {
+                panel.SetMessage("GeoSkylines", impRoadsFileName + " file doesn't exist!", false);
+                return;
+            }
+
+            StreamReader sr = File.OpenText("Files/" + impRoadsFileName);
+
+            List<GeoSkylinesRoad> roads = new List<GeoSkylinesRoad>();
+            NetInfo ni = PrefabCollection<NetInfo>.FindLoaded("Basic Road");
+
+            string[] field_names = CSVParser.Split(sr.ReadLine());
+            string[] fields;
+                        
+            while (!sr.EndOfStream)
+            {
+                fields = CSVParser.Split(sr.ReadLine());
+
+                string coords = "";
+                string oneWay = "";
+                int lanes = 1;
+                string streetName = "";
+                ulong roadId = 0;
+                string roadType = "";
+                bool bridge = false;
+                for (int i = 0; i < field_names.Length; i++)
+                {
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");
+                    //Debug.Log(columnName + ": " + columnValue);
+                    if (columnName == "geometry")
+                        ProvideCoordsString(out coords, columnValue);
+
+                    if (columnName == "road_name")
+                    {
+                        streetName = columnValue;
+                    }
+
+                    if (columnName == "id")
+                        roadId = ulong.Parse(columnValue);
+
+                }                
+
+                if (coords == "")
+                    continue;
+
+                if (streetName == "")
+                    continue;
+
+                // get the vertexes from WKT
+                List<Vector2> segCoords = new List<Vector2>();
+                string[] coords_v = coords.Split(',');
+
+                foreach (var nodeCoords in coords_v)
+                {
+                    string[] separatingChars = { " " };
+                    string[] nodeCoords_v = nodeCoords.Split(separatingChars, StringSplitOptions.RemoveEmptyEntries);
+
+                    var lat = double.Parse(nodeCoords_v[latitudePos].Trim());
+                    var lon = double.Parse(nodeCoords_v[longitudePos].Trim());
+                    UTMResult utmCoords = convertor.convertLatLngToUtm(lat, lon);
+                    float xCoord = (float)(utmCoords.Easting - centerUTM.Easting);
+                    float zCoord = (float)(utmCoords.Northing - centerUTM.Northing);
+                    if (Math.Abs(xCoord) < impRoadsCoordMax && Math.Abs(zCoord) < impRoadsCoordMax)
+                    {
+                        var pos = new Vector2(xCoord, zCoord);                        
+                        segCoords.Add(pos);
+                    }
+                }
+
+                GeoSkylinesRoad road = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni, 5);
+                roads.Add(road);
+            }
+
+            sr.Close();
+
+            Debug.Log(DateTime.Now.ToString("h:mm:ss tt"));
+
+            NetSegment[] segments = nm.m_segments.m_buffer;
+            
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var a_seg = segments[i];                
+
+                if (a_seg.m_startNode == 0 || a_seg.m_endNode == 0)
+                    continue;
+
+                //var startN = nm.m_nodes.m_buffer[a_seg.m_startNode].m_position;
+                //Vector2 startPos = new Vector2(startN.x, startN.z);
+                //var endN = nm.m_nodes.m_buffer[a_seg.m_endNode].m_position;
+                //Vector2 endPos = new Vector2(endN.x, endN.z);
+
+                var segName = nm.GetSegmentName((ushort)i);
+
+                var midV3 = a_seg.m_middlePosition;
+                Vector2 midV2 = new Vector2(midV3.x, midV3.z);
+                List<string> foundStreetNames = new List<string>();
+
+                foreach (var road in roads)
+                    foreach (var seg in road.segments)
+                    {
+                        if (IsPointInPolygon(seg.buffer, midV2))
+                            foundStreetNames.Add(seg.road.roadName);
+                        //if (IsPointInPolygon(seg.buffer, endPos))
+                        //    foundStreetNames.Add(seg.road.roadName);
+                    }
+
+                if (foundStreetNames.Count == 0)
+                {
+                    Debug.Log("Nothing found for seg Id: " + i + ", road name: " + segName);
+                    continue;
+                }
+                    
+                
+                string msg = "SegId "+ i + " - found street names: \n";
+                foreach (var name in foundStreetNames)
+                    msg += name + ", ";
+                msg += "\n";                                 
+
+                var street_name = foundStreetNames[0];
+                msg += "Old name: " + segName + " New name: " + street_name + "\n";
+                Debug.Log(msg);
+
+                nm.SetSegmentNameImpl((ushort)i, street_name);
+            }
+
+            Debug.Log(DateTime.Now.ToString("h:mm:ss tt"));
+            panel.SetMessage("GeoSkylines", "Road names import complete.", false);
         }
 
         public void DebugRoad()
@@ -690,8 +792,9 @@ namespace GeoSkylines
             List<GeoSkylinesRoad> rails = new List<GeoSkylinesRoad>();
             NetInfo ni;
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+            
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
@@ -700,20 +803,20 @@ namespace GeoSkylines
                 ulong railId = 0;
                 string railType = "";
                 bool bridge = false;
-                for (int i = 0; i < impRailsColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impRailsColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
-                    if (columnName == impRailsGeometryColumn)
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                                        
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    if (columnName.ToLower().Contains("type"))
+                    if (columnName == "rail_type")
                         railType = columnValue;
 
-                    if (columnName.ToLower() == "id")
+                    if (columnName == "id")
                         railId = ulong.Parse(columnValue);
 
-                    if (columnName.ToLower() == "bridge")
+                    if (columnName == "bridge")
                         if (columnValue != "")
                             bridge = true;
                 }
@@ -760,8 +863,8 @@ namespace GeoSkylines
                     }
                 }
 
-                GeoSkylinesRoad inRoad = new GeoSkylinesRoad(railId, "", railType, "", 0, bridge, segCoords, ni);
-                rails.Add(inRoad);
+                GeoSkylinesRoad rail = new GeoSkylinesRoad(railId, "", railType, "", 0, bridge, segCoords, ni, 0);
+                rails.Add(rail);
             }
 
             sr.Close();
@@ -887,8 +990,9 @@ namespace GeoSkylines
             
             StreamReader sr = File.OpenText("Files/"+ impBuildingsFileName);
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+            
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
@@ -900,30 +1004,30 @@ namespace GeoSkylines
                 ulong bldId = 0;
                 string bldType = "";
                 int bldLvl = 0;
-                for (int i = 0; i < impBuildingsColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impBuildingsColumns[i];
+                    var columnName = field_names[i].Trim().ToLower();
                     var columnValue = fields[i].Replace("\"", "");
                     Debug.Log(columnName + ": " + columnValue);
-                    if (columnName == impBuildingsGeometryColumn)
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    else if (columnName.ToLower().Contains("type"))
+                    else if (columnName == "building_type")
                         bldType = columnValue;
 
-                    else if (columnName.ToLower().Contains("height"))
+                    else if (columnName == "height")
                         height = float.Parse(columnValue);
 
-                    else if (columnName.ToLower().Contains("level") && fields[i].Length != 0)
+                    else if (columnName == "levels" && fields[i].Length != 0)
                         bldLvl = int.Parse(columnValue);
 
-                    else if (columnName.ToLower().Contains("angle"))                    
+                    else if (columnName == "angle")                    
                         angle = float.Parse(columnValue);
 
-                    else if (columnName.ToLower().Contains("width"))
+                    else if (columnName == "width")
                         width = float.Parse(columnValue);
 
-                    else if (columnName.ToLower() == "id")
+                    else if (columnName == "id")
                         bldId = ulong.Parse(columnValue);
                 }
 
@@ -953,8 +1057,7 @@ namespace GeoSkylines
             foreach (var bld in buildings)
             {
                 Vector3 bldPos = new Vector3(bld.bldCentroid[0], 0, bld.bldCentroid[1]);
-                float yCoord = tm.SampleRawHeightSmoothWithWater(bldPos, false, 0f);
-                bldPos.y = yCoord;
+                bldPos.y = tm.SampleRawHeightSmoothWithWater(bldPos, false, 0f);
                 string building_type = bld.bldType;
                 int bldLvl = bld.bldLvl;
                 float angle = bld.angle;
@@ -1082,7 +1185,7 @@ namespace GeoSkylines
             {
                 var treePos = new Vector3((float)randomizedX, 0f, (float)randomizedZ);
 
-                ti = treeTypes[sysRand.Next(0, treeTypesLength)];
+                ti = treeTypes[sysRand.Next(0, treeTypes.Length)];
                 SimulationManager.instance.AddAction(AddTree(treePos, SimulationManager.instance.m_randomizer, ti));
 
                 return true;
@@ -1105,8 +1208,8 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/"+ impTreesVectorFileName);
 
-            string[] fields;
-            sr.ReadLine();
+            string[] field_names = CSVParser.Split(sr.ReadLine());
+            string[] fields;            
 
             int cnt = 0;
             while (!sr.EndOfStream)
@@ -1116,18 +1219,18 @@ namespace GeoSkylines
                 string coords = "";
                 string treeType = "";
                 ulong treeId = 0;
-                for (int i = 0; i < impTreesVectorColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impTreesVectorColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                    
                     //Debug.Log(columnName + ": " + columnValue);
-                    if (columnName == impTreesVectorGeometryColumn)
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    else if (columnName.ToLower().Contains("type"))
+                    else if (columnName == "type")
                         treeType = columnValue;
 
-                    else if (columnName.ToLower() == "id")
+                    else if (columnName == "id")
                         treeId = ulong.Parse(columnValue);
                 }
 
@@ -1150,7 +1253,7 @@ namespace GeoSkylines
                         break;
                     }
 
-                    ti = treeTypes[sysRand.Next(0, treeTypesLength)];
+                    ti = treeTypes[sysRand.Next(0, treeTypes.Length)];
                     SimulationManager.instance.AddAction(AddTree(new Vector3(xCoord,0f,zCoord), rand, ti));
 
                     cnt++;
@@ -1178,8 +1281,8 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/"+ impWaterWayFileName);
 
-            string[] fields;
-            sr.ReadLine();
+            string[] field_names = CSVParser.Split(sr.ReadLine());
+            string[] fields;            
             
             float tmpY;            
             while (!sr.EndOfStream)
@@ -1188,16 +1291,18 @@ namespace GeoSkylines
 
                 string coords = "";
                 string waterWayType = "";
-                for (int i = 0; i < impWaterWayColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impWaterWayColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
-                    if (columnName == impWaterWayGeometryColumn)
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                    
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
                     else if (columnName == "waterway")
                         waterWayType = columnValue;
                 }
 
+                Debug.Log(coords);
+                Debug.Log(waterWayType);
                 if (coords == "")
                     continue;
 
@@ -1228,8 +1333,7 @@ namespace GeoSkylines
                     if (Math.Abs(xCoord) < coordMax && Math.Abs(zCoord) < coordMax)
                     {
                         var pos = new Vector3(xCoord, 0f, zCoord);
-                        tmpY = tm.SampleRawHeightSmoothWithWater(pos, false, 0f);
-                        pos.y = tmpY;
+                        pos.y = tm.SampleRawHeightSmoothWithWater(pos, false, 0f);
                         waterwayNodes.Add(pos);
                     }
                 }
@@ -1263,9 +1367,8 @@ namespace GeoSkylines
                             stepPosX = stepPosX + (float)stepX;
                             stepPosZ = stepPosZ + (float)stepZ;
                             tmpPos.x = stepPosX;
-                            tmpPos.z = stepPosZ;
-                            tmpY = tm.SampleRawHeightSmoothWithWater(tmpPos, false, 0f);
-                            tmpPos.y = tmpY;
+                            tmpPos.z = stepPosZ;                            
+                            tmpPos.y = tm.SampleRawHeightSmoothWithWater(tmpPos, false, 0f);
                             positions.Add(tmpPos);
                         }
                     }
@@ -1306,7 +1409,7 @@ namespace GeoSkylines
             panel.SetMessage("GeoSkylines", "Diging water ways complete. ", false);
         }
 
-        public void ImportWaterBody()
+        public void ImportWaterReservoirs()
         { 
             if (!confloaded)
                 return;
@@ -1321,19 +1424,19 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/"+ impWaterFileName);
 
-            string[] fields;
-            sr.ReadLine();
+            string[] field_names = CSVParser.Split(sr.ReadLine());
+            string[] fields;            
 
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
 
                 string coords = "";
-                for (int i = 0; i < impWaterColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impWaterColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
-                    if (columnName == impWaterGeometryColumn)
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                                        
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
                 }
 
@@ -1426,113 +1529,6 @@ namespace GeoSkylines
             return isInside;
         }
 
-        public void ImportZonestmp2()
-        {
-            var zoneBlocks = zm.m_blocks.m_buffer;
-            string debugMsg = "";
-            ItemClass.Zone zone = ItemClass.Zone.ResidentialLow;
-
-            for (ushort i = 0; i < zoneBlocks.Length; i++)
-            {
-                var pos = zoneBlocks[i].m_position;
-                if (pos == Vector3.zero)
-                    continue;
-
-                debugMsg += "zoneBlockId: " + i;
-                debugMsg += "\n";
-                int num = (int)((zoneBlocks[i].m_flags & 65280u) >> 8);
-                debugMsg += "num: " + num;
-                debugMsg += "\n";
-                for (int z = 0; z < num; z++)
-                    for (int x = 0; x < 4; x++)
-                    {
-                        debugMsg += "x: " + x + ", z: " + z + " ...";
-                        if (zoneBlocks[i].SetZone(x, z, zone))
-                            debugMsg += "Zone set";
-                        debugMsg += "\n";
-                    }
-                zoneBlocks[i].RefreshZoning(i);
-                //var pixelX = (int)(pos.x / TerrainManager.RAW_CELL_SIZE + 540);
-                //var pixelZ = (int)(pos.z / TerrainManager.RAW_CELL_SIZE + 540);
-                //zoneBlocks[i].ZonesUpdated(i, pixelX - 10, pixelZ - 10, pixelX + 10, pixelZ + 10);
-            }
-            Debug.Log(debugMsg);
-        }
-
-
-        // not working!
-        public void ImportZonestmp()
-        {
-            
-            var zoneBlocks = zm.m_blocks.m_buffer;
-            string msg = "";
-            ItemClass.Zone zone = ItemClass.Zone.ResidentialLow;            
-            //for (ushort i = 0; i < zoneBlocks.Length; i++)
-            //{
-            //    var zoneBlock = zoneBlocks[i];
-            //    var pos = zoneBlock.m_position;
-
-            //    if (pos == Vector3.zero)
-            //        continue;
-
-            //    var tmpZone = zoneBlock.GetZone(0, 0);
-            //    if (tmpZone != ItemClass.Zone.Unzoned &&
-            //        tmpZone != ItemClass.Zone.None &&
-            //        tmpZone != ItemClass.Zone.Distant)
-            //    {
-            //        zone = zoneBlock.GetZone(0, 0);
-            //        break;
-            //    }                    
-            //}
-
-            //Debug.Log(zone);
-            for (ushort i = 0; i < zoneBlocks.Length; i++)
-            {
-                var zoneBlock = zoneBlocks[i];                
-                var pos = zoneBlock.m_position;
-
-                if (pos == Vector3.zero)
-                    continue;
-
-                msg += "zoneBlock.m_valid (before SetZone): " + zoneBlock.m_valid;
-                msg += "\n";
-                msg += "zoneBlockId: " + i;
-                msg += "\n";
-                int num = (int)((zoneBlock.m_flags & 65280u) >> 8);
-                msg += "num: " + num;
-                msg += "\n";
-                for (int z = 0; z < num; z++)
-                    for (int x = 0; x < 4; x++)
-                    {
-                        msg += "x: " + x + ", z: " + z + " ...";
-                        if (zoneBlock.SetZone(x, z, zone))
-                            msg += "Zone set";
-                        msg += "\n";
-                    }
-
-                zoneBlock.RefreshZoning(i);
-                msg += "zoneBlock.m_valid (after RefreshingZone): " + zoneBlock.m_valid;
-                msg += "\n";                
-
-                //var pixelX = (int)(pos.x / TerrainManager.RAW_CELL_SIZE + 540);
-                //var pixelZ = (int)(pos.z / TerrainManager.RAW_CELL_SIZE + 540);
-                //zoneBlock.ZonesUpdated(i, pixelX - 10, pixelZ - 10, pixelX + 10, pixelZ + 10);
-                //var valid = zoneBlock.m_valid;
-                //ulong num6 = 144680345676153346;
-                //for (int index = 0; index < 7; ++index)
-                //{
-                //    valid = (ulong)((long)valid & ~(long)num6 | (long)valid & (long)valid << 1 & (long)num6);
-                //    num6 <<= 1;
-                //}
-                //zoneBlock.m_valid = valid;
-                //msg += "zoneBlock.m_valid (after SetZone): " + zoneBlock.m_valid;
-                //msg += "\n";
-
-                Debug.Log(msg);
-            }
-            //Debug.Log(debugMsg);
-        }
-
         public void ImportServices()
         {
             if (!confloaded)
@@ -1543,6 +1539,20 @@ namespace GeoSkylines
                 panel.SetMessage("GeoSkylines", impServicesFileName + " file doesn't exist!", false);
                 return;
             }
+
+            Dictionary<string, uint> bldPrefab_name_number = new Dictionary<string, uint>();
+            var prefabCnt = PrefabCollection<BuildingInfo>.LoadedCount();
+            for (uint i = 0; i < prefabCnt; i++)
+            {
+                var prefab = PrefabCollection<BuildingInfo>.GetPrefab(i);
+                bldPrefab_name_number[prefab.name] = i;
+            }
+            string msg = "";
+            foreach (var pfn in bldPrefab_name_number)
+            {
+                msg += pfn + "\n";
+            }
+            Debug.Log(msg);
 
             Dictionary<string, uint> serviceMapping = new Dictionary<string, uint>();            
             if (!File.Exists("Files/" + serviceMatchFileName))
@@ -1556,17 +1566,18 @@ namespace GeoSkylines
                 while (!s_map_sr.EndOfStream)
                 {
                     var s_map_vec = CSVParser.Split(s_map_sr.ReadLine());
-                    uint prefabIndex;
-                    uint.TryParse(s_map_vec[2], out prefabIndex);
-                    serviceMapping[s_map_vec[0]] = prefabIndex;
+                    Debug.Log(s_map_vec[0] + ": " + s_map_vec[1]); 
+                    if (bldPrefab_name_number.ContainsKey(s_map_vec[1]))
+                        serviceMapping[s_map_vec[0]] = bldPrefab_name_number[s_map_vec[1]];
                 }
             }
 
             List<GeoSkylinesService> services = new List<GeoSkylinesService>();
             StreamReader sr = File.OpenText("Files/" + impServicesFileName);
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+            
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
@@ -1574,18 +1585,18 @@ namespace GeoSkylines
                 string coords = "";
                 ulong serviceId = 0;
                 string serviceType = "";
-                for (int i = 0; i < impServicesColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impServicesColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                    
                     //Debug.Log(columnName + ": " + columnValue);
-                    if (columnName == impServicesGeometryColumn)
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    else if (columnName.ToLower().Contains("amenity"))
+                    else if (columnName == "amenity")
                         serviceType = columnValue;
 
-                    else if (columnName.ToLower() == "id")
+                    else if (columnName == "id")
                         serviceId = ulong.Parse(columnValue);
                 }
 
@@ -1615,8 +1626,7 @@ namespace GeoSkylines
             foreach (var a_service in services)
             {
                 Vector3 servicePos = new Vector3(a_service.serviceCentroid[0], 0, a_service.serviceCentroid[1]);
-                float yCoord = tm.SampleRawHeightSmoothWithWater(servicePos, false, 0f);
-                servicePos.y = yCoord;
+                servicePos.y = tm.SampleRawHeightSmoothWithWater(servicePos, false, 0f);
                 string service_type = a_service.serviceType;
 
                 bi = PrefabCollection<BuildingInfo>.FindLoaded("MerryGoRound");
@@ -1652,14 +1662,14 @@ namespace GeoSkylines
             }
 
             Dictionary<string, string> zoneMapping = new Dictionary<string, string>();              
-            if (!File.Exists("Files/" + zoneMatchFileName))
+            if (!File.Exists("Files/" + zoneMappingFileName))
             {
-                panel.SetMessage("GeoSkylines", zoneMatchFileName + " file doesn't exist!", false);
+                panel.SetMessage("GeoSkylines", zoneMappingFileName + " file doesn't exist!", false);
                 return;
             }
             else
             {
-                StreamReader z_map_sr = File.OpenText("Files/" + zoneMatchFileName);
+                StreamReader z_map_sr = File.OpenText("Files/" + zoneMappingFileName);
                 while (!z_map_sr.EndOfStream)
                 {
                     var z_map_vec = CSVParser.Split(z_map_sr.ReadLine());
@@ -1704,8 +1714,9 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/" + impBuildingsFileName);
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+            
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
@@ -1717,29 +1728,29 @@ namespace GeoSkylines
                 ulong bldId = 0;
                 string bldType = "";
                 int bldLvl = 0;
-                for (int i = 0; i < impBuildingsColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impBuildingsColumns[i];
+                    var columnName = field_names[i].Trim().ToLower();
                     var columnValue = fields[i].Replace("\"", "");                    
-                    if (columnName == impBuildingsGeometryColumn)
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    else if (columnName.ToLower().Contains("type"))
+                    else if (columnName == "building_type")
                         bldType = columnValue;
 
-                    else if (columnName.ToLower().Contains("height"))
+                    else if (columnName == "height")
                         float.TryParse(columnValue, out height);
 
-                    else if (columnName.ToLower().Contains("level") && fields[i].Length != 0)
+                    else if (columnName == "levels" && fields[i].Length != 0)
                         int.TryParse(columnValue, out bldLvl);
 
-                    else if (columnName.ToLower().Contains("angle"))
+                    else if (columnName == "angle")
                         float.TryParse(columnValue, out angle);
 
-                    else if (columnName.ToLower().Contains("width"))
+                    else if (columnName == "width")
                         float.TryParse(columnValue, out width);
 
-                    else if (columnName.ToLower() == "id")
+                    else if (columnName == "id")
                         ulong.TryParse(columnValue, out bldId);
                 }
 
@@ -1771,8 +1782,7 @@ namespace GeoSkylines
             foreach (var bld in buildings)
             {
                 Vector3 bldPos = new Vector3(bld.bldCentroid[0], 0, bld.bldCentroid[1]);
-                float yCoord = tm.SampleRawHeightSmoothWithWater(bldPos, false, 0f);
-                bldPos.y = yCoord;
+                bldPos.y = tm.SampleRawHeightSmoothWithWater(bldPos, false, 0f);
                 string building_type = bld.bldType;
                 int bldLvl = bld.bldLvl;
                 float angle = bld.angle;
@@ -1870,14 +1880,14 @@ namespace GeoSkylines
             }
 
             Dictionary<string, string> zoneMapping = new Dictionary<string, string>();
-            if (!File.Exists("Files/" + zoneMatchFileName))
+            if (!File.Exists("Files/" + zoneMappingFileName))
             {
-                panel.SetMessage("GeoSkylines", zoneMatchFileName + " file doesn't exist!", false);
+                panel.SetMessage("GeoSkylines", zoneMappingFileName + " file doesn't exist!", false);
                 return;
             }
             else
             {
-                StreamReader z_map_sr = File.OpenText("Files/" + zoneMatchFileName);
+                StreamReader z_map_sr = File.OpenText("Files/" + zoneMappingFileName);
                 while (!z_map_sr.EndOfStream)
                 {
                     var z_map_vec = CSVParser.Split(z_map_sr.ReadLine());
@@ -1906,8 +1916,9 @@ namespace GeoSkylines
 
             StreamReader sr = File.OpenText("Files/" + impZonesFileName);
 
+            string[] field_names = CSVParser.Split(sr.ReadLine());
             string[] fields;
-            sr.ReadLine();
+            
             while (!sr.EndOfStream)
             {
                 fields = CSVParser.Split(sr.ReadLine());
@@ -1915,17 +1926,17 @@ namespace GeoSkylines
                 string coords = "";
                 ulong zoneId = 0;
                 string zoneType = "";
-                for (int i = 0; i < impZonesColumns.Length; i++)
+                for (int i = 0; i < field_names.Length; i++)
                 {
-                    var columnName = impZonesColumns[i];
-                    var columnValue = fields[i].Replace("\"", "");
-                    if (columnName == impZonesGeometryColumn)
+                    var columnName = field_names[i].Trim().ToLower();
+                    var columnValue = fields[i].Replace("\"", "");                    
+                    if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
-                    else if (columnName.ToLower() == "zonetype")
+                    else if (columnName == "zone_type")
                         zoneType = columnValue;
 
-                    else if (columnName.ToLower() == "id")
+                    else if (columnName == "id")
                         ulong.TryParse(columnValue, out zoneId);
                 }
 
@@ -2137,6 +2148,90 @@ namespace GeoSkylines
             coords = coords.Replace(")", "");
             if (coords.Contains("\""))
                 coords = coords.Replace("\"", "");
+        }
+
+        public string OutputConfiguration(string type)
+        {
+            string confTxt = "";
+
+            confTxt += "MapName: " + mapName;
+            confTxt += "(" + centerLon + ", " + centerLat + ")\n";
+
+            if (type=="road")
+            {
+                confTxt += "ImportRoadsCoordMax: " + impRoadsCoordMax + "\n";
+                confTxt += "impRoadsFileName: " + impRoadsFileName + "\n";
+                confTxt += "roadMappingFileName: " + roadMappingFileName + "\n";
+            }
+
+            if (type=="rail")
+            {
+                confTxt += "ImportRailsCoordMax: " + impRailsCoordMax + "\n";
+                confTxt += "impRailsFileName: " + impRailsFileName + "\n";
+                confTxt += "railMappingFileName: " + railMappingFileName + "\n";
+            }
+
+            if (type=="zone")
+            {
+                confTxt += "ImportZonesCoordMax: " + impZonesCoordMax + "\n";
+                confTxt += "impZonesFileName: " + impZonesFileName + "\n";
+                confTxt += "zoneMatchFileName: " + zoneMappingFileName + "\n";
+            }
+
+            if (type=="service")
+            {
+                confTxt += "coordMax: " + coordMax + "\n";
+                confTxt += "impServicesFileName: " + impServicesFileName + "\n";
+                confTxt += "serviceMatchFileName: " + serviceMatchFileName + "\n";
+            }
+
+            if (type=="tree1")
+            {
+                confTxt += "ImportTreesCoordMax: " + impTreesCoordMax + "\n";
+                confTxt += "ImportTreesTreeTypes: ";
+                foreach (var treeT in treeTypes)
+                    confTxt += treeT + ", ";
+                confTxt += "\n";
+                confTxt += "impTreesRasterFileName: " + impTreesRasterFileName + "\n";
+                confTxt += "ImportTreesRasterOffsetX: " + impTreesRasterOffsetX + "\n";
+                confTxt += "ImportTreesRasterOffsetY: " + impTreesRasterOffsetY + "\n";
+                confTxt += "ImportTreesRasterMultiply: " + impTreesRasterMultiply + "\n";
+            }
+
+            if (type == "tree2")
+            {
+                confTxt += "ImportTreesCoordMax: " + impTreesCoordMax + "\n";
+                confTxt += "impTreesVectorFileName: " + impTreesVectorFileName + "\n";
+                confTxt += "ImportTreesTreeTypes: ";
+                foreach (var treeT in treeTypes)
+                    confTxt += treeT + ", ";
+                confTxt += "\n";
+            }
+
+            if (type=="water1")
+            {
+                confTxt += "coordMax: " + coordMax + "\n";
+                confTxt += "ImportWaterWayTypes: ";
+                foreach (var waterT in impWaterWayTypes)
+                    confTxt += waterT + ", ";
+                confTxt += "\n";
+                confTxt += "ImportWaterWayDepths: ";
+                foreach (var waterD in impWaterWayDepths)
+                    confTxt += waterD + ",";
+                confTxt += "\n";
+                confTxt += "ImportWaterWayWidths: ";
+                foreach (var waterW in impWaterWayWidths)
+                    confTxt += waterW + ",";
+                confTxt += "\n"; 
+            }
+
+            if (type=="water2")
+            {
+                confTxt += "coordMax: " + coordMax + "\n";
+                confTxt += "ImportWaterDepth: " + impWaterDepth + "\n"; 
+            }
+
+            return confTxt;
         }
 
         //public float  Distance(Vector2 start, Vector2 end)

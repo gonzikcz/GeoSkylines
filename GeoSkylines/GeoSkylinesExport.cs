@@ -20,6 +20,7 @@ namespace GeoSkylines
         private WGS84_UTM convertor = new WGS84_UTM(null);
         private UTMResult centerUTM;
         private string ZoneLetter;
+        private string mapName;
         private double centerLat;
         private double centerLon;
         private float exportXMin = -8640;
@@ -32,6 +33,7 @@ namespace GeoSkylines
 
         private NetManager net_manager = NetManager.instance;
         BuildingManager bld_manager = BuildingManager.instance;
+        private TerrainManager tm = TerrainManager.instance;
 
         public GeoSkylinesExport()
         {
@@ -66,7 +68,9 @@ namespace GeoSkylines
                 var val = a_conf.Value;
                 var key = a_conf.Key;
 
-                if (key == "CenterLatitude")
+                if (key == "MapName")
+                    mapName = val;
+                else if (key == "CenterLatitude")
                     double.TryParse(val, out centerLat);
                 else if (key == "CenterLongitude")
                     double.TryParse(val, out centerLon);
@@ -228,7 +232,7 @@ namespace GeoSkylines
             if (!confloaded)
                 return;
 
-            string columns = "Id,Name,Geometry";
+            string columns = "Id,Name,Geometry,ElevationS,ElevationE";
 
             var a_type = typeof(NetSegment);
             var properties = a_type.GetProperties();
@@ -337,7 +341,12 @@ namespace GeoSkylines
                 wkt = CreateWkt(new LatLng[] { startRwoLL, endRwoLL });
             }
 
-            string rowTxt = string.Format("{0},{1},{2}", segId, road_name, wkt);
+            float tmpY = tm.SampleRawHeightSmoothWithWater(startPos, false, 0f);
+            float elevS = startPos.y - tmpY;
+            tmpY = tm.SampleRawHeightSmoothWithWater(endPos, false, 0f);
+            float elevE = endPos.y - tmpY;
+
+            string rowTxt = string.Format("{0},{1},{2},{3},{4}", segId, road_name, wkt, elevS, elevE);
 
             string field_info = "";
             foreach (var prop in properties)
@@ -1028,6 +1037,20 @@ namespace GeoSkylines
 
             panel.SetMessage("GeoSkylines", "Prefab information written into a output_log.txt in folder c:/Program Files (x86)/Steam/steamapps/common/Cities_Skylines/Cities_Data (or similar) ", false);
 
+        }
+
+        public string OutputConfiguration()
+        {
+            string confTxt = "";
+
+            confTxt += "MapName: " + mapName;
+            confTxt += "(" + centerLon + ", " + centerLat + ")\n";
+            confTxt += "exportXMin: " + exportXMin + "\n";
+            confTxt += "exportXMax: " + exportXMax + "\n";
+            confTxt += "exportYMin: " + exportYMin + "\n";
+            confTxt += "exportYMax: " + exportYMax + "\n";
+
+            return confTxt;
         }
     }
 }

@@ -11,6 +11,7 @@ using ColossalFramework.Plugins;
 using ColossalFramework.IO;
 using System.Collections;
 using System.Threading;
+using System.Drawing;
 
 namespace GeoSkylines
 {   
@@ -48,7 +49,7 @@ namespace GeoSkylines
         public bool bridge;
         public NetInfo netInfo;
 
-        public GeoSkylinesRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<Vector2> vertexes, NetInfo ni)
+        public GeoSkylinesRoad(ulong roadId, string roadName, string roadType, string oneWay, int lanes, bool bridge, List<Vector2> vertexes, NetInfo ni, int buffer_len)
         {
             this.roadId = roadId;            
             this.roadName = roadName;
@@ -63,7 +64,7 @@ namespace GeoSkylines
             {
                 var startNode = vertexes[i];
                 var endNode = vertexes[i + 1];
-                GeoSkylinesSegment segment = new GeoSkylinesSegment(this, i, startNode, Vector3.zero, Vector3.zero, endNode);
+                GeoSkylinesSegment segment = new GeoSkylinesSegment(this, i, startNode, Vector3.zero, Vector3.zero, endNode, buffer_len);
                 segments.Add(segment);
             }
         }
@@ -81,7 +82,7 @@ namespace GeoSkylines
         public float length;
         public Vector2[] buffer;
 
-        public GeoSkylinesSegment(GeoSkylinesRoad road, int numSegRoad, Vector2 startNodePos, Vector2 controlA, Vector2 controlB, Vector2 endNodePos)
+        public GeoSkylinesSegment(GeoSkylinesRoad road, int numSegRoad, Vector2 startNodePos, Vector2 controlA, Vector2 controlB, Vector2 endNodePos, int buffer_len)
         {
             this.road = road;
             segId = road.roadId + "-" + numSegRoad;
@@ -91,116 +92,146 @@ namespace GeoSkylines
             this.endNode = endNodePos;
             vertexes = new Vector2[] { startNode, endNode};
 
-            int buffer = 10;
             this.controlA = controlA;
             this.controlB = controlB;
             length = VectorUtils.LengthXY(endNodePos - startNodePos);
+
+            if (buffer_len < 1)
+                return;
+            
             List<Vector2> bufferPoints = new List<Vector2>();
 
-            //Dictionary<int, Vector2> startBufferPoints = new Dictionary<int, Vector2>();
-            //startBufferPoints.Add(1, new Vector2(startNode.x - buffer, startNode.y + buffer));
-            //startBufferPoints.Add(2, new Vector2(startNode.x + buffer, startNode.y + buffer));
-            //startBufferPoints.Add(3, new Vector2(startNode.x + buffer, startNode.y - buffer));
-            //startBufferPoints.Add(4, new Vector2(startNode.x - buffer, startNode.y - buffer));
+            Dictionary<int, Vector2> startBufferPoints = new Dictionary<int, Vector2>();
+            startBufferPoints.Add(1, new Vector2(startNode.x - buffer_len, startNode.y + buffer_len));
+            startBufferPoints.Add(2, new Vector2(startNode.x + buffer_len, startNode.y + buffer_len));
+            startBufferPoints.Add(3, new Vector2(startNode.x + buffer_len, startNode.y - buffer_len));
+            startBufferPoints.Add(4, new Vector2(startNode.x - buffer_len, startNode.y - buffer_len));
 
-            //Dictionary<int, Vector2> endBufferPoints = new Dictionary<int, Vector2>();
-            //endBufferPoints.Add(1, new Vector2(endNode.x - buffer, endNode.y + buffer));
-            //endBufferPoints.Add(2, new Vector2(endNode.x + buffer, endNode.y + buffer));
-            //endBufferPoints.Add(3, new Vector2(endNode.x + buffer, endNode.y - buffer));
-            //endBufferPoints.Add(4, new Vector2(endNode.x - buffer, endNode.y - buffer));
+            Dictionary<int, Vector2> endBufferPoints = new Dictionary<int, Vector2>();
+            endBufferPoints.Add(1, new Vector2(endNode.x - buffer_len, endNode.y + buffer_len));
+            endBufferPoints.Add(2, new Vector2(endNode.x + buffer_len, endNode.y + buffer_len));
+            endBufferPoints.Add(3, new Vector2(endNode.x + buffer_len, endNode.y - buffer_len));
+            endBufferPoints.Add(4, new Vector2(endNode.x - buffer_len, endNode.y - buffer_len));
 
-            //VertexLoop vertLoop = new VertexLoop(4);
-            //float shortest = 9999;
-            //Dictionary<float, List<int>> distPointIndexes = new Dictionary<float, List<int>>();
-            //foreach (KeyValuePair<int, Vector2> tmpPoint in startBufferPoints)
-            //{
-            //    float tmpDist = VectorUtils.LengthXZ(endNode - tmpPoint.Value);
-            //    if (!distPointIndexes.ContainsKey(tmpDist))
-            //        distPointIndexes.Add(tmpDist, new List<int>());
-            //    if (tmpDist <= shortest)
-            //    {
-            //        shortest = tmpDist;
-            //        distPointIndexes[shortest].Add(tmpPoint.Key);
-            //    }
-            //}
+            VertexLoop vertLoop = new VertexLoop(4);
+            float shortest = 9999;
+            Dictionary<float, List<int>> distPointIndexes = new Dictionary<float, List<int>>();
+            foreach (KeyValuePair<int, Vector2> tmpPoint in startBufferPoints)
+            {
+                float tmpDist = VectorUtils.LengthXY(endNode - tmpPoint.Value);
+                if (!distPointIndexes.ContainsKey(tmpDist))
+                    distPointIndexes.Add(tmpDist, new List<int>());
+                if (tmpDist <= shortest)
+                {
+                    shortest = tmpDist;
+                    distPointIndexes[shortest].Add(tmpPoint.Key);
+                }
+            }
 
-            //int startInd = 0;
-            //var pointIndexes = distPointIndexes[shortest];
-            //if (pointIndexes.Count == 1)
-            //{
-            //    startInd = vertLoop.NextVertex(pointIndexes[0]);
-            //}
-            //else if (pointIndexes.Count == 2)
-            //{
-            //    int l = 9;
-            //    int h = 0;
-            //    foreach (var ind in pointIndexes)
-            //    {
-            //        l = Math.Min(l, ind);
-            //        h = Math.Max(h, ind);
-            //    }
-            //    if (h - l > 2)
-            //        h = l;
-            //    startInd = vertLoop.NextVertex(h);
-            //}
+            int startInd = 0;
+            var pointIndexes = distPointIndexes[shortest];
+            if (pointIndexes.Count > 2)
+            {
+                // in case there is some strange segment
+                bufferPoints.Add(new Vector2(startNode.x + buffer_len, startNode.y + buffer_len));
+                bufferPoints.Add(new Vector2(startNode.x + buffer_len, startNode.y - buffer_len));
+                bufferPoints.Add(new Vector2(startNode.x - buffer_len, startNode.y - buffer_len));
+                bufferPoints.Add(new Vector2(startNode.x - buffer_len, startNode.y + buffer_len));
+                bufferPoints.Add(new Vector2(startNode.x + buffer_len, startNode.y + buffer_len));
+                buffer = bufferPoints.ToArray();
+                return;                
+            }
 
-            //shortest = 9999;
-            //distPointIndexes = new Dictionary<float, List<int>>();
-            //foreach (KeyValuePair<int, Vector2> tmpPoint in endBufferPoints)
-            //{
-            //    float tmpDist = VectorUtils.LengthXZ(startNode - tmpPoint.Value);
-            //    if (!distPointIndexes.ContainsKey(tmpDist))
-            //        distPointIndexes.Add(tmpDist, new List<int>());
-            //    if (tmpDist <= shortest)
-            //    {
-            //        shortest = tmpDist;
-            //        distPointIndexes[shortest].Add(tmpPoint.Key);
-            //    }
-            //}
+            if (pointIndexes.Count == 1)
+            {
+                startInd = vertLoop.NextVertex(pointIndexes[0]);
+            }
+            else if (pointIndexes.Count == 2)
+            {
+                int l = 9;
+                int h = 0;
+                foreach (var ind in pointIndexes)
+                {
+                    l = Math.Min(l, ind);
+                    h = Math.Max(h, ind);
+                }
+                if (h - l > 2)
+                    h = l;
+                startInd = vertLoop.NextVertex(h);
+            }
 
-            //int connectInd = 0;
-            //pointIndexes = distPointIndexes[shortest];
-            //if (pointIndexes.Count == 1)
-            //{
-            //    connectInd = vertLoop.NextVertex(pointIndexes[0]);
-            //}
-            //else if (pointIndexes.Count == 2)
-            //{
-            //    int l = 9;
-            //    int h = 0;
-            //    foreach (var ind in pointIndexes)
-            //    {
-            //        l = Math.Min(l, ind);
-            //        h = Math.Max(h, ind);
-            //    }
-            //    if (h - l > 2)
-            //        h = l;
-            //    connectInd = vertLoop.NextVertex(h);
-            //}
+            shortest = 9999;
+            distPointIndexes = new Dictionary<float, List<int>>();
+            foreach (KeyValuePair<int, Vector2> tmpPoint in endBufferPoints)
+            {
+                float tmpDist = VectorUtils.LengthXZ(startNode - tmpPoint.Value);
+                if (!distPointIndexes.ContainsKey(tmpDist))
+                    distPointIndexes.Add(tmpDist, new List<int>());
+                if (tmpDist <= shortest)
+                {
+                    shortest = tmpDist;
+                    distPointIndexes[shortest].Add(tmpPoint.Key);
+                }
+            }
 
-            //for (int i = 0; i < 4 - pointIndexes.Count; i++)
-            //{
-            //    var tmpInd = startInd;
-            //    for (int k = 0; k < i; k++)
-            //        tmpInd = vertLoop.NextVertex(tmpInd);
-            //    bufferPoints.Add(startBufferPoints[tmpInd]);
-            //}
+            int connectInd = 0;
+            pointIndexes = distPointIndexes[shortest];
+            if (pointIndexes.Count == 1)
+            {
+                connectInd = vertLoop.NextVertex(pointIndexes[0]);
+            }
+            else if (pointIndexes.Count == 2)
+            {
+                int l = 9;
+                int h = 0;
+                foreach (var ind in pointIndexes)
+                {
+                    l = Math.Min(l, ind);
+                    h = Math.Max(h, ind);
+                }
+                if (h - l > 2)
+                    h = l;
+                connectInd = vertLoop.NextVertex(h);
+            }
 
-            //for (int i = 0; i < 4 - pointIndexes.Count; i++)
-            //{
-            //    var tmpInd = connectInd;
-            //    for (int k = 0; k < i; k++)
-            //        tmpInd = vertLoop.NextVertex(tmpInd);
-            //    bufferPoints.Add(endBufferPoints[tmpInd]);
-            //}
+            msg = "SegID: " + segId + "; RoadName: " + road.roadName + "\n";
+            msg += "pointIndexes (" + pointIndexes.Count +"): \n";
+            foreach (var pi in pointIndexes)
+                msg += pi + ", ";
+            msg += "\n";
+            msg += "startInd: " + startInd + "; connectInd: " + connectInd + "\n";
+            Debug.Log(msg);
 
-            //bufferPoints.Add(startBufferPoints[startInd]);
-            this.buffer = bufferPoints.ToArray();
+            for (int i = 0; i < 4 - pointIndexes.Count; i++)
+            {
+                var tmpInd = startInd;
+                for (int k = 0; k < i; k++)
+                    tmpInd = vertLoop.NextVertex(tmpInd);
+                Debug.Log("startInd: " + startInd + "; tmpInd: " + tmpInd);
+                bufferPoints.Add(startBufferPoints[tmpInd]);
+            }
+
+            for (int i = 0; i < 4 - pointIndexes.Count; i++)
+            {
+                var tmpInd = connectInd;
+                for (int k = 0; k < i; k++)
+                    tmpInd = vertLoop.NextVertex(tmpInd);
+                Debug.Log("connectInd: " + connectInd + "; tmpInd: " + tmpInd);
+                bufferPoints.Add(endBufferPoints[tmpInd]);
+            }
+
+            bufferPoints.Add(startBufferPoints[startInd]);
+            buffer = bufferPoints.ToArray();
+            msg = "";
+            var xMinus = bufferPoints[0].x;
+            var yMinus = bufferPoints[0].y;
             foreach (var p in bufferPoints)
             {
-                msg += p.ToString() + "\n";
+                var tmpX = p.x - xMinus;
+                var tmpY = p.y - yMinus;
+                msg += p.ToString() + " | " + tmpX + ", " + tmpY +"\n";
             }
-            //Debug.Log(msg);
+            Debug.Log(msg);
         }
     }
 
