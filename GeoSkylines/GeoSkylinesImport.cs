@@ -54,8 +54,8 @@ namespace GeoSkylines
         private string mapName;
         private double centerLat;
         private double centerLon;
-        private ushort latitudePos;
-        private ushort longitudePos;
+        private ushort latitudePos = 1;
+        private ushort longitudePos = 0;
         private ushort impRoadsCoordMax;
         private ushort impRailsCoordMax;        
         private ushort impBuildingsCoordMax;
@@ -86,9 +86,6 @@ namespace GeoSkylines
 
             centerUTM = convertor.convertLatLngToUtm(centerLat, centerLon);
 
-            longitudePos = 0;
-            if (latitudePos == 0)
-                longitudePos = 1;
         }
 
         public void LoadConfiguration()
@@ -120,8 +117,6 @@ namespace GeoSkylines
                     double.TryParse(val, out centerLat);
                 else if (key == "CenterLongitude")
                     double.TryParse(val, out centerLon);
-                else if (key == "LatitudePosition")
-                    ushort.TryParse(val, out latitudePos);
                 else if (key == "ImportTreesRasterOffTolerance")
                     ushort.TryParse(val, out impTreesRasterOffTolerance);
                 else if (key == "ImportTreesTreeTypes")
