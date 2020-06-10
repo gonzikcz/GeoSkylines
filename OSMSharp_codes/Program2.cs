@@ -122,11 +122,11 @@ namespace OSMtest
 
             //TestTrig();
 
-            //TestBufferSeg();
+            TestBufferSeg();
 
             //TestCurves();
 
-            WgsBbox();
+            //WgsBbox();
 
         }
 
@@ -973,6 +973,35 @@ namespace OSMtest
                 coords = coords.Replace("\"", "");
         }
 
+        static string CreateWkt(LatLng[] listOfPositions)
+        {
+            //POINT(14.362884416061357 50.965573500452379)
+            //LINESTRING (-93.370254516601562 37.888759613037109, -93.371223449707031 37.888286590576172, -93.371490478515625 37.888153076171875)
+            //LINEARRING (14.361453056335449 50.966289520263672, 14.361678123474121 50.966449737548828, 14.361824989318848 50.96636962890625, 14.361600875854492 50.966209411621094, 14.361453056335449 50.966289520263672)
+            string wkt = "";
+            //Debug.Log("listOfPositions.Length: " + listOfPositions.Length.ToString());
+            if (listOfPositions.Length == 1)
+                wkt = string.Format("\"POINT ({0} {1})\"", listOfPositions[0].Lng, listOfPositions[0].Lat);
+            else if (listOfPositions.Length > 1)
+            {
+                string coords = "";
+                string sep = "";
+                foreach (var pos in listOfPositions)
+                {
+                    coords += string.Format("{0}{1} {2}", sep, pos.Lng, pos.Lat);
+                    sep = ", ";
+                }
+
+                var lastIndex = listOfPositions.Length - 1;
+                if (listOfPositions[0].Lat == listOfPositions[lastIndex].Lat && listOfPositions[0].Lng == listOfPositions[lastIndex].Lng)
+                    wkt = string.Format("\"POLYGON (({0}))\"", coords);
+                else
+                    wkt = string.Format("\"LINESTRING ({0})\"", coords);
+            }
+
+            return wkt;
+        }
+
         static void TestListInsert()
         {
             List<int> aList = new List<int>
@@ -1025,7 +1054,7 @@ namespace OSMtest
             WGS84_UTM convertor = new WGS84_UTM(null);
             UTMResult centerUTM = convertor.convertLatLngToUtm(centerLat, centerLon);
             Regex CSVParser = new Regex(",(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))");
-            string csv_path = @"c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\roads_rwo.csv";
+            string csv_path = @"c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\roads_rwo_small.csv";
             StreamReader sr = File.OpenText(csv_path);
             sr.ReadLine();
             while (!sr.EndOfStream)
@@ -1194,6 +1223,11 @@ namespace OSMtest
 
          }
 
+        public void TestVectors()
+        {
+
+        }
+
         static float Length(float[] start, float[] end)
         {
             var startX = start[0];
@@ -1300,9 +1334,9 @@ namespace OSMtest
             edgePoints.Add(point1);
             LatLng point2 = convertor.convertUtmToLatLng(utmMid.Easting + 8640, utmMid.Northing - 8640, utmMid.ZoneNumber, "N");
             edgePoints.Add(point2);
-            LatLng point3 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing + 8640, utmMid.ZoneNumber, "N");
+            LatLng point3 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing - 8640, utmMid.ZoneNumber, "N");
             edgePoints.Add(point3);
-            LatLng point4 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing - 8640, utmMid.ZoneNumber, "N");
+            LatLng point4 = convertor.convertUtmToLatLng(utmMid.Easting - 8640, utmMid.Northing + 8640, utmMid.ZoneNumber, "N");
             edgePoints.Add(point4);
 
             Console.WriteLine("LON      LAT");
@@ -1323,6 +1357,11 @@ namespace OSMtest
             Console.WriteLine();
 
             Console.WriteLine(maxLon + "," + maxLat + "," + minLon + "," + minLat);
+            Console.WriteLine();
+
+            var wkt = CreateWkt(new LatLng[] { point1, point2, point3, point4, point1});
+            Console.WriteLine(wkt);
+            Console.WriteLine();
 
             Console.ReadLine();
 
