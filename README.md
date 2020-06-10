@@ -22,11 +22,9 @@ For preparing the data in QGIS see the Word document!
 During the data preparation phase I followed these initial steps:
 - Deciding on an area to model. The game area is 17.28 x 17.28 km. This fits cities up to 400,000. Above that you will have to model just parts of the city. 
 - Choose a mid-point of the modeled area - this will also be the mid-point of your model. See the Word document for more details.
-- Though it's not necessary, I'd recommend also creating a bounding box of your area. This can be done in QGIS (see Word document) or use one of my helper methods in 
-- Defining a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 meters to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. (see the Word document for more details!)
-- Recalculate the bounding box to WGS. (Metric projections are easy to calculate but for import and export, WGS coordinates are easier to use.). 
-- Calculate the mid-point of the bounding box (i.e. centroid) > this will be used for conversions between geographic coordinates (in WGS) and game coordinates
-- download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. 
+- In import_export.conf file set the CenterLatitude and CenterLongitude. Make sure not to swap latitude and longitude! 
+- Though it's not necessary, I'd recommend also creating a bounding box of your area. This can be done in QGIS (see Word document) or use one of my helper method WgsBbox() in https://github.com/gonzikcz/GeoSkylines/tree/master/OSMSharp_codes
+- download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. But actually now I'd recommend QGIS, it's more user friendly. See Word document for more details!
 - Filtering out most of the attributes. In most cases I just need the geometry, type of object (e.g. road type). See examples. 
 - Resulting CSV files should be named: roads_rwo.csv, waterway_rwo.csv, water_rwo.csv, buildings_rwo.csv, amenity_rwo.csv
 
