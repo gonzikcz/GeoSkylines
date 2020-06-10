@@ -26,62 +26,54 @@ During the data preparation phase I followed these initial steps:
 - Though it's not necessary, I'd recommend also creating a bounding box of your area. This can be done in QGIS (see Word document) or use one of my helper method WgsBbox() in https://github.com/gonzikcz/GeoSkylines/tree/master/OSMSharp_codes
 - download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. But actually now I'd recommend QGIS, it's more user friendly. See Word document for more details!
 - Filtering out most of the attributes. In most cases I just need the geometry, type of object (e.g. road type). See examples. 
-- Resulting CSV files should be named: roads_rwo.csv, waterway_rwo.csv, water_rwo.csv, buildings_rwo.csv, amenity_rwo.csv
+- Resulting CSV files should be named: roads_rwo.csv, waterway_rwo.csv, water_rwo.csv, buildings_rwo.csv, amenity_rwo.csv, trees_rwo.csv, zones_rwo.csv.
 
 # Prepare raster image for tree coverage 
-There is a GeoSkylines method for creating tree coverage from raster image. To prepare the raster image follow these steps:
-- For the selected area, obtain tree layer such as Urban Atlas Street Tree Layer or CORINE Landcover or layers from local authorities. 
-- Clip the layer by the defined bounding box (and do another required processing e.g. filtering out unwanted data)
-- In QGIS (or other GIS software), fill polygons with color, no line, turn off all other layers so you have white background and then export as image: extent defined by the bounding box, resolution should be 1081 x 1081 pixels. (sometimes it's bit off, maybe there's some better way)
-- name it trees.png
+There is a GeoSkylines method for creating tree coverage from raster image (trees.png saved in c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\). See the Word document to prepare the raster image in QGIS. 
 
 # Prepare tree vector layer
-Alternatively, tree coverage can be created from vector data as well. To prepare the CSV file, follow these steps:
-- For the selected area, obtain tree layer such as Urban Atlas Street Tree Layer or CORINE Landcover or layers from local authorities.
-- Clip the layer by the defined bounding box (and do another required processing e.g. filtering out unwanted data)
-- In QGIS (or other GIS software), create a layer of regular points in the defined bounding box. You have to test the optimal distance between regular points, 10 metres is recommended. Add random offset to avoid gridded look of the regular points. 
-- Clip the layer of regular points by the polygons of the tree layer
-- Export clipped regular points layer as CSV with geometry in WKT format. Named it trees_rwo.csv. 
+Alternatively, tree coverage can be created from vector data as well. To prepare the file trees_rwo.csv, follow the steps described in the Word document.  
 
 # Import methods of GeoSkylines mod
 GeoSkylinesImport.ImportRoads():
-- Run by hotkey combo: Ctrl + R
+- Run by hotkey combo: right Ctrl + R
 - Requires: roads_rwo.csv, rwo_cs_road_match.csv, import_export.conf
 - Description: loops over all road segments in roads_rwo.csv, matches road types according to rwo_cs_road_match.csv, creates game nodes and then game roads, names the roads according to geodata orginals, creates a bridge if original data says bridge = yes, creates one way roads. 
-- Note: Although the message "Roads import completed" will display almost immediately, it can take a long time (e.g. up to half an hour) to generate the road network. During this time the game looks like it's not doing anything. 
+- Note: it’s better to call this method in actual game not the map editor. That way you can see the progress on the screen (segments appearing) and also the roads stick better to the surface. In map editor the roads are bit elevated. 
 
 GeoSkylinesImport.ImportRails():
-- Run by hotkey combo: Ctrl + L
+- Run by hotkey combo: right Ctrl + L
 - Requires: rails_rwo.csv, rwo_cs_rail_match.csv, import_export.conf
 - Description: loops over all rail segments in rails_rwo.csv, matches rail types according to rwo_cs_rail_match.csv, creates game nodes and then game rails. 
+- Note: C:S doesn’t use that many railways as in the real world. The amount of railways created by this method is therefore too much for C:S. Either filter out the geodata first or buldoze it after creation. 
 
 GeoSkylinesImport.ImportWaterBody():
-- Run by hotkey combo: Ctrl + W
+- Run by hotkey combo: right Ctrl + W
 - Requires: water_rwo.csv, import_export.conf
 - Description: loops over all records of standing water defined by a polygon in water_rwo.csv, creates a bounding box around polygon, then every 5 metres withing the bounding box calls Ray casting algorithm to find out whether point is within polygon or not. If yes, then lower terrain by defined value (variable ImportWaterDepth, see more details below). 
 
 GeoSkylinesImport.ImportWaterWay():
-- Run by hotkey combo: Ctrl + Q
+- Run by hotkey combo: right Ctrl + Q
 - Requires: waterway_rwo.csv, import_export.conf
 - Description: loops over all segments of water way in waterway_rwo.csv, lowers terrain by defined value (variable ImportWaterWayDepths, see more details below) every 5 metres between the vertices of each segments. 
 
 GeoSkylinesImport.ImportTreesRaster():
-- Run by hotkey combo: Ctrl + T
+- Run by hotkey combo: right Ctrl + T
 - Requires: trees.png (1081 x 1081 resolution), import_export.conf
 - Description: loops over every pixel and for every non-white pixel it creates a tree. If variable ImportTreesRasterMultiply is defined, method adjust the number of trees created (see more details below). Method adds randomness into the position of the created trees. 
 
 GeoSkylinesImport.ImportTreesVector():
-- Run by hotkey combo: Ctrl + V
+- Run by hotkey combo: right Ctrl + V
 - Requires: trees_rwo.csv, import_export.conf
 - Description: loops over all trees in trees_rwo.csv and creates a tree.
 
-GeoSkylinesImport.ImportZones():
-- Run by hotkey combo: Ctrl + Z
+GeoSkylinesImport.ImportZonesArea():
+- Run by hotkey combo: right Ctrl + Z
 - Requires: buildings_rwo.csv, rwo_cs_zone_match.csv, import_export.conf
 - Description: sets zones to existing zone blocks (must be called after creating roads, this will create zone blocks as well). First it loops over every building in buildings_rwo.csv, finds zone blocks near the position of the building, matches the building type to a game zone (e.g. building type = house to zone = ResidentialLow) according to rwo_cs_zone_match.csv and then assigns selected zone to the zone blocks. 
 
 GeoSkylinesImport.ImportServices():
-- Run by hotkey combo: Ctrl + S
+- Run by hotkey combo: right Ctrl + S
 - Requires: amenity_rwo.csv, rwo_cs_service_match.csv, import_export.conf
 - Description: loops over every amenity (service) in amenity_rwo.csv, matches amenity type to a game service building according to rwo_cs_service_match.csv and creates a service building. 
 - Note: the service buildings created by this method doesn't seem to work properly but still it might be handy to know where the services are. It can be buldozed and then re-created manually. 
@@ -93,33 +85,33 @@ GeoSkylinesImport.ImportBuildings():
 
 # Export methods of GeoSkylines mod
 GeoSkylinesExport.ExportSegments(): 
-- Run by hotkey combo: Ctrl + G
+- Run by hotkey combo: right Ctrl + G
 - Requires: import_export.conf
 - Description: loops over all roads created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the road as attributes). 
 
 GeoSkylinesExport.ExportBuildings():
-- Run by hotkey combo: Ctrl + H
+- Run by hotkey combo: right Ctrl + H
 - Requires: import_export.conf
 - Description: loops over all buildings created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the building as attributes).
 
 GeoSkylinesExport.ExportZones():
-- Run by hotkey combo: Ctrl + J
+- Run by hotkey combo: right Ctrl + J
 - Requires: import_export.conf
 - Description: loops over all zones created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the zone as attributes).
 
 GeoSkylinesExport.ExportTrees():
-- Run by hotkey combo: Ctrl + K
+- Run by hotkey combo: right Ctrl + K
 - Requires: import_export.conf
 - Description: loops over all trees created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the tree as attributes).
 
 # Helper methods of GeoSkylines mod
 GeoSkylinesExport.DisplayLLOnMouseClick():
-- Runb by hotkey combo: Ctrl + left mouse click
+- Runb by hotkey combo: right Ctrl + left mouse click
 - Requires: import_export.conf
 - Description: Displays in a message box screen, game and Lat Lon coordinates of the place of the click. 
 
 GeoSkylinesExport.OutputPrefabInfo():
-- Run by hotkey combo: Ctrl + P
+- Run by hotkey combo: right Ctrl + P
 - Requires: nothing
 - Description: outputs all road types (NetInfo), building types (BuidlingInfo) and tree types (TreeInfo) loaded currently in the game into "c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\output_log.txt". 
 - Note: this is valuable for creating the match CSV files and setting some variables in import_export.conf
@@ -141,53 +133,17 @@ CenterLongitude:
 - Description: Longitude of the defined mid-point. Coordinates of the mid-point are used for conversion between real-world WGS coordinates and the game coordinates. It should be pretty accurate in order to get accurate conversion of coordinates.
 - Example: 20.1857094521613
 
-LatitudePosition: 
-- Description: Some systems define WGS coordinates in lat, lon others in lon, lat. Using this parameter you can simply tell the code which is which. Range is 0 to 1. If LatitudePosition is set to 0 then latitude is the first coordinate and longitude the second and vice versa. 
-- Example: 1
-
-ImportRoadsColumns:
-- Description: List of columns of the prepared roads_rwo.csv file. Columns: Road Name, Road Type, One Way, Bridge and the geometry column are required by the code. You can have more columns but these will be just ignored. 
-- Example: Id,Road Name,Road Type,One Way,Lanes,Bridge,Geometry
-
-ImportRoadsGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation. 
-- Example: Geometry
-
 ImportRoadsCoordMax:
 - Description: Specifies the max coord (in both directions - positive and negative) for creating game objects. Game area is 17280 x 17280, thus axes x a z range from -8640 to 8640. This represents 9x9 tile. If no value is defined, then the absolute 8640 will be used. 
 - Example: 4800 (this represents the area of 5x5 tiles, game objects won't be created past this)
-
-ImportRailsColumns:
-- Description: List of columns of the prepared rails_rwo.csv file. Columns: Rail Type and the geometry column are required by the code. You can have more columns but these will be just ignored. 
-- Example: Id,Rail Type,Bridge,Geometry
-
-ImportRailsGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation. 
-- Example: Geometry
 
 ImportRailsCoordMax:
 - Description: Specifies the max coord (in both directions - positive and negative) for creating game objects. Game area is 17280 x 17280, thus axes x a z range from -8640 to 8640. This represents 9x9 tiles. If no value is defined, then the absolute 8640 will be used. 
 - Example: 4800 (this represents the area of 5x5 tiles, game objects won't be created past this)
 
-ImportBuildingsColumns:
-- Description: List of columns of the prepared buildings_rwo.csv file. The code works with point geometry. If you have area then create a centroid of it and use that instead. 
-- Example: Id, Buidling Type, Levels, Centroid, Geometry
-
-ImportBuildingsGeometryColumn:
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
-- Example: Centroid
-
 ImportBuildingsCoordMax: 
 - Description: Specifies the max coord (in both directions - positive and negative) for creating game objects. Game area is 17280 x 17280, thus axes x a z range from -8640 to 8640. This represents 9x9 tiles. If no value is defined, then the absolute 8640 will be used. 
 - Example: 4800 (this represents the area of 5x5 tiles, game objects won't be created past this)
-
-ImportServicesColumns: 
-- Description: List of columns of the prepared amenity_rwo.csv file. The code works with point geometry. If you have area then create a centroid of it and use that instead. Column Amenity is required by the code. 
-- Example: Id,Amenity,Centroid,Geometry
-
-ImportServicesGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
-- Example: Centroid
 
 ImportTreesRasterOffTolerance:
 - Description: Sometimes the created map image is not exactly 1081 x 1081 but instead few pixels off (but still close enough). In this case you can specify the number of pixels the map image is off. The code will work only with map images that are within range (1081 - ImportTreesRasterOffTolerance) to (1081 + ImportTreesRasterOffTolerance). 
@@ -202,14 +158,6 @@ ImportTreesRasterMultiply:
 - Example A: -2 (every second tree creation will be skipped, i.e. the total number of trees will be divided by 2)
 - Example B: 1 (at every tree creation, new additional tree will be created, i.e. multiplying the number of tree by 2). 
 
-ImportTreesVectorColumns: 
-- Description: List of columns of the prepared trees_rwo.csv file. Only geometry column is required by the code. 
-- Example: WKT,id
-
-ImportTreesVectorGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
-- Example: WKT
-
 ImportTreesTreeTypes: 
 - Description: For adding diversity in the tree creation process. List of ID of a TreeInfo (prefab) instances. It has to be IDs as names getting the TreeInfo from name didn't work in the code. For each tree creation, one TreeInfo is randomly selected from the provided list. 
 - Example: 0,1,2,6,14,13 (you can use the helper method GeoSkylinesExport.OutputPrefabInfo() to list IDs of all TreeInfo instances) 
@@ -218,14 +166,6 @@ ImportTreesCoordMax:
 - Description: Specifies the max coord (in both directions - positive and negative) for creating game objects. Game area is 17280 x 17280, thus axes x a z range from -8640 to 8640. This represents 9x9 tiles. If no value is defined, then the absolute 8640 will be used. 
 - Example: 8640 (this represents the area of 9x9 tiles, game objects won't be created past this)
 - Note: lower the max coord if you need to lower the total number of trees if reaching the tree limit is a problem. 
- 
-ImportWaterWayColumns:
-- Description: List of columns of the prepared waterway_rwo.csv file. Column waterway and the geometry column is required by the code. 
-- Example: WKT,name,waterway
-
-ImportWaterWayGeometryColumn:
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
-- Example: WKT
 
 ImportWaterWayTypes: 
 - Description: List of waterway types that the code will work with. Any other water way type will be ignored. 
@@ -240,14 +180,6 @@ ImportWaterWayDepths:
 ImportWaterWayWidths: 
 - Description: List of additional widths for water way types defined by ImportWaterWayTypes. One "width" represents 16x16 metres on 1081 x 1081 grid. 
 - Example: 1, 0 (assuming "ImportWaterWayTypes=river, stream" then river basins will width=2, stream basins will have width=1)
-
-ImportWaterColumns:
-- Description: List of columns of the prepared water_rwo.csv file. Only the geometry column is required by the code. 
-- Example: Id,Geometry
-
-ImportWaterGeometryColumn: 
-- Description: Specifies the name of the geometry column. The code will look for it and use this for the coordinates conversion and game object creation.
-- Example: Geometry
 
 ImportWaterDepth: 
 - Description: Defines the depth of standing water basins. 
