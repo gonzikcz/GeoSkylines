@@ -1,5 +1,5 @@
 motorway,Highway2L2W
-moroway_oneway,Rural Highway
+motorway_oneway,Rural Highway
 trunk,Highway2L2W
 trunk_oneway,Rural Highway
 primary,Small Avenue
@@ -15,9 +15,9 @@ residential_oneway,One-Lane Oneway
 service,
 motorway_link,HighwayRamp
 trunk_link,HighwayRamp
-primary_link,
-secondary_link,
-tertiary_link,
+primary_link,Oneway Road
+secondary_link,One-Lane Oneway
+tertiary_link,One-Lane Oneway
 living_street,Oneway Road Decoration Grass
 pedestrian,
 track,
