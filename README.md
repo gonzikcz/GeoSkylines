@@ -2,13 +2,14 @@
 Cities: Skylines game mod for import/export of geodata. 
 
 Install game mod (if not on Steam workshop):
-- use the provided GeoSkylines.dll or compile the code using e.g. Visual Studio
+- use the provided GeoSkylines.dll
+- if you want to compile the code you need also additional code from burningmime: https://github.com/burningmime/curves/tree/master/burningmime.curves
 - go to c:\Users\<username>\AppData\Local\Colossal Order\Cities_Skylines\Addons\Mods\
 - create a folder GeoSkylines
 - copy the GeoSkylines.dll file to newly created folder GeoSkylines
 - in game, go to Content Manager > Mods > turn on GeoSkylines
 
-GeoSkylines methods are called using the threading hooks via hotkeys, combination of (ONLY RIGHT!) Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conflicts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. (Though this has been limited now to right Ctrl)
+GeoSkylines methods are called using the threading hooks via hotkeys, combination of ONLY RIGHT Ctrl + R, L, W, Q, T, V, S, Z, P, G, H, J, K. To avoid conflicts with hotkeys of other mods, it is recommended to turn off other mods before using GeoSkylines. After using import or export methods of GeoSkylines then you can turn the mod off. (Though this has been limited now to right Ctrl)
 
 Three stages of creating playable model in Cities: Skylines based on geodata:
 1. Prepare geodata for import
@@ -17,9 +18,12 @@ Three stages of creating playable model in Cities: Skylines based on geodata:
 
 # Prepare vector geodata for import
 I chose to use a simple CSV format with geometry data recorded as WKT. Thus, any geo-dataset can be used. For testing I used OSM predominantly. For the CSV file preparation I used OSMSharp library (other programs such as QGIS or FME would suffice). See the code examples of the data preparation using OSMSharp. 
+For preparing the data in QGIS see the Word document!
 During the data preparation phase I followed these initial steps:
-- Selection of an area to model
-- Defining a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 meters to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. 
+- Deciding on an area to model. The game area is 17.28 x 17.28 km. This fits cities up to 400,000. Above that you will have to model just parts of the city. 
+- Choose a mid-point of the modeled area - this will also be the mid-point of your model. See the Word document for more details.
+- Though it's not necessary, I'd recommend also creating a bounding box of your area. This can be done in QGIS (see Word document) or use one of my helper methods in 
+- Defining a 17.28km x 17.28km (size of the gaming area) bounding box in the chosen location. The easiest way is to create a CSV where you write the coordinates of the bounding box. Use metric projection (e.g. variation of UTM), that way calculating the bounding box is an easy math task: you choose any coordinate and then add 17280 meters to x and y axes. See example in examples\Olomouc. You can then upload this into e.g. QGIS. (see the Word document for more details!)
 - Recalculate the bounding box to WGS. (Metric projections are easy to calculate but for import and export, WGS coordinates are easier to use.). 
 - Calculate the mid-point of the bounding box (i.e. centroid) > this will be used for conversions between geographic coordinates (in WGS) and game coordinates
 - download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. 
