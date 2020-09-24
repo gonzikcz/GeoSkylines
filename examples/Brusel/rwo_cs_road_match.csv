@@ -1,0 +1,32 @@
+motorway,
+moroway_oneway,
+trunk,
+trunk_oneway,
+primary,Small Avenue
+primary_oneway,Oneway Road
+secondary,Small Avenue
+secondary_oneway,One-Lane Oneway
+tertiary,Basic Road
+tertiary_oneway,One-Lane Oneway
+unclassified,Basic Road
+unclassified_oneway,One-Lane Oneway
+residential,Basic Road
+residential_oneway,One-Lane Oneway
+service,
+motorway_link,
+trunk_link,
+primary_link,
+secondary_link,
+tertiary_link,
+living_street,Oneway Road Decoration Grass
+pedestrian,
+track,
+bus_guideway,
+escape,
+raceway,
+road,Basic Road
+road_oneway, One-Lane Oneway
+footway,
+bridleway,
+steps,
+path,

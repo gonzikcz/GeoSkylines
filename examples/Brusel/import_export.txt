@@ -1,0 +1,34 @@
+MapName: Brussels
+CenterLatitude: 50.849591
+CenterLongitude: 4.372754
+LatitudePosition: 1
+ImportRoadsColumns: WKT,Id,Road Type,Road Name,Lanes,One Way,Bridge
+ImportRoadsGeometryColumn: WKT
+ImportRoadsCoordMax: 4800
+ImportRailsColumns: Id,Rail Type,Bridge,Geometry
+ImportRailsGeometryColumn: Geometry
+ImportRailsCoordMax: 4800
+ImportBuildingsColumns: Id, Buidling Type, Levels, Centroid, Geometry
+ImportBuildingsGeometryColumn: Centroid
+ImportBuildingsCoordMax: 4800
+ImportZonesColumns: Id,ZoneType,Geometry
+ImportZonesGeometryColumn: Geometry
+ImportZonesCoordMax: 4800
+ImportServicesColumns: Id,Amenity,Centroid,Geometry
+ImportServicesGeometryColumn: Centroid
+ImportTreesRasterOffTolerance: 0
+ImportTreesRasterOffsetX: 480
+ImportTreesRasterOffsetY: 870
+ImportTreesRasterMultiply: 1
+ImportTreesVectorColumns: WKT,id
+ImportTreesVectorGeometryColumn: WKT
+ImportTreesTreeTypes: 0,1,2,6,14,13
+ImportTreesCoordMax: 8640
+ImportWaterWayColumns: WKT,osm_id,name,waterway
+ImportWaterWayGeometryColumn: WKT
+ImportWaterWayTypes: river2,river
+ImportWaterWayDepths: 15,10
+ImportWaterWayWidths: 1,0
+ImportWaterColumns: Id,Geometry
+ImportWaterGeometryColumn: Geometry
+ImportWaterDepth: 15

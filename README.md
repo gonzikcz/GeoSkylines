@@ -24,7 +24,7 @@ For preparing the data in QGIS see the Word document!
 During the data preparation phase I followed these initial steps:
 - Deciding on an area to model. The game area is 17.28 x 17.28 km. This fits cities up to 400,000. Above that you will have to model just parts of the city. 
 - Choose a mid-point of the modeled area - this will also be the mid-point of your model. See the Word document for more details.
-- In import_export.conf file set the CenterLatitude and CenterLongitude. Make sure not to swap latitude and longitude! 
+- In import_export.txt file set the CenterLatitude and CenterLongitude. Make sure not to swap latitude and longitude! 
 - Though it's not necessary, I'd recommend also creating a bounding box of your area. This can be done in QGIS (see Word document) or use one of my helper method WgsBbox() in https://github.com/gonzikcz/GeoSkylines/tree/master/OSMSharp_codes
 - download geodata using the defined bouding box. In my case I got the OSM data from OverPass API. But actually now I'd recommend QGIS, it's more user friendly. See Word document for more details!
 - Filtering out most of the attributes. In most cases I just need the geometry, type of object (e.g. road type). See examples. 
@@ -39,89 +39,89 @@ Alternatively, tree coverage can be created from vector data as well. To prepare
 # Import methods of GeoSkylines mod
 GeoSkylinesImport.ImportRoads():
 - Run by hotkey combo: right Ctrl + R
-- Requires: roads_rwo.csv, rwo_cs_road_match.csv, import_export.conf
+- Requires: roads_rwo.csv, rwo_cs_road_match.csv, import_export.txt
 - Description: loops over all road segments in roads_rwo.csv, matches road types according to rwo_cs_road_match.csv, creates game nodes and then game roads, names the roads according to geodata orginals, creates a bridge if original data says bridge = yes, creates one way roads. 
 - Note: it’s better to call this method in actual game not the map editor. That way you can see the progress on the screen (segments appearing) and also the roads stick better to the surface. In map editor the roads are bit elevated. 
 
 GeoSkylinesImport.ImportRails():
 - Run by hotkey combo: right Ctrl + L
-- Requires: rails_rwo.csv, rwo_cs_rail_match.csv, import_export.conf
+- Requires: rails_rwo.csv, rwo_cs_rail_match.csv, import_export.txt
 - Description: loops over all rail segments in rails_rwo.csv, matches rail types according to rwo_cs_rail_match.csv, creates game nodes and then game rails. 
 - Note: C:S doesn’t use that many railways as in the real world. The amount of railways created by this method is therefore too much for C:S. Either filter out the geodata first or buldoze it after creation. 
 
 GeoSkylinesImport.ImportWaterBody():
 - Run by hotkey combo: right Ctrl + W
-- Requires: water_rwo.csv, import_export.conf
+- Requires: water_rwo.csv, import_export.txt
 - Description: loops over all records of standing water defined by a polygon in water_rwo.csv, creates a bounding box around polygon, then every 5 metres withing the bounding box calls Ray casting algorithm to find out whether point is within polygon or not. If yes, then lower terrain by defined value (variable ImportWaterDepth, see more details below). 
 
 GeoSkylinesImport.ImportWaterWay():
 - Run by hotkey combo: right Ctrl + Q
-- Requires: waterway_rwo.csv, import_export.conf
+- Requires: waterway_rwo.csv, import_export.txt
 - Description: loops over all segments of water way in waterway_rwo.csv, lowers terrain by defined value (variable ImportWaterWayDepths, see more details below) every 5 metres between the vertices of each segments. 
 
 GeoSkylinesImport.ImportTreesRaster():
 - Run by hotkey combo: right Ctrl + T
-- Requires: trees.png (1081 x 1081 resolution), import_export.conf
+- Requires: trees.png (1081 x 1081 resolution), import_export.txt
 - Description: loops over every pixel and for every non-white pixel it creates a tree. If variable ImportTreesRasterMultiply is defined, method adjust the number of trees created (see more details below). Method adds randomness into the position of the created trees. 
 
 GeoSkylinesImport.ImportTreesVector():
 - Run by hotkey combo: right Ctrl + V
-- Requires: trees_rwo.csv, import_export.conf
+- Requires: trees_rwo.csv, import_export.txt
 - Description: loops over all trees in trees_rwo.csv and creates a tree.
 
 GeoSkylinesImport.ImportZonesArea():
 - Run by hotkey combo: right Ctrl + Z
-- Requires: buildings_rwo.csv, rwo_cs_zone_match.csv, import_export.conf
+- Requires: buildings_rwo.csv, rwo_cs_zone_match.csv, import_export.txt
 - Description: sets zones to existing zone blocks (must be called after creating roads, this will create zone blocks as well). First it loops over every building in buildings_rwo.csv, finds zone blocks near the position of the building, matches the building type to a game zone (e.g. building type = house to zone = ResidentialLow) according to rwo_cs_zone_match.csv and then assigns selected zone to the zone blocks. 
 
 GeoSkylinesImport.ImportServices():
 - Run by hotkey combo: right Ctrl + S
-- Requires: amenity_rwo.csv, rwo_cs_service_match.csv, import_export.conf
+- Requires: amenity_rwo.csv, rwo_cs_service_match.csv, import_export.txt
 - Description: loops over every amenity (service) in amenity_rwo.csv, matches amenity type to a game service building according to rwo_cs_service_match.csv and creates a service building. 
 - Note: the service buildings created by this method doesn't seem to work properly but still it might be handy to know where the services are. It can be buldozed and then re-created manually. 
 
 GeoSkylinesImport.ImportBuildings():
-- Requires: buildings_rwo.csv, import_export.conf
+- Requires: buildings_rwo.csv, import_export.txt
 - Description: loops over every building in buildings_rwo.csv, tries to calculate the right building rotation angle and creates the building. 
 - Note: this method is not used due to many complications. Difficult to calculate the right rotation angle, buildings are offten to close to the roads, and mainly: creating buildings directly goes against the game logic where only zones are set. Although this can be overcome by mods, it was still quite unusable. 
 
 # Export methods of GeoSkylines mod
 GeoSkylinesExport.ExportSegments(): 
 - Run by hotkey combo: right Ctrl + G
-- Requires: import_export.conf
+- Requires: import_export.txt
 - Description: loops over all roads created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the road as attributes). 
 
 GeoSkylinesExport.ExportBuildings():
 - Run by hotkey combo: right Ctrl + H
-- Requires: import_export.conf
+- Requires: import_export.txt
 - Description: loops over all buildings created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the building as attributes).
 
 GeoSkylinesExport.ExportZones():
 - Run by hotkey combo: right Ctrl + J
-- Requires: import_export.conf
+- Requires: import_export.txt
 - Description: loops over all zones created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the zone as attributes).
 
 GeoSkylinesExport.ExportTrees():
 - Run by hotkey combo: right Ctrl + K
-- Requires: import_export.conf
+- Requires: import_export.txt
 - Description: loops over all trees created in the game and exports them as GIS data (CSV format, geometry in WKT, any meaningful information about the tree as attributes).
 
 # Helper methods of GeoSkylines mod
 GeoSkylinesExport.DisplayLLOnMouseClick():
 - Runb by hotkey combo: right Ctrl + left mouse click
-- Requires: import_export.conf
+- Requires: import_export.txt
 - Description: Displays in a message box screen, game and Lat Lon coordinates of the place of the click. 
 
 GeoSkylinesExport.OutputPrefabInfo():
 - Run by hotkey combo: right Ctrl + P
 - Requires: nothing
 - Description: outputs all road types (NetInfo), building types (BuidlingInfo) and tree types (TreeInfo) loaded currently in the game into "c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\output_log.txt". 
-- Note: this is valuable for creating the match CSV files and setting some variables in import_export.conf
+- Note: this is valuable for creating the match CSV files and setting some variables in import_export.txt
 
 # Configuration of import and export methods
-CSV files for import, CSV files for matching types of objects, trees.png file and import_export.conf file have to be stored in folder: c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\. This folder is also used to store CSV files to output game objects as GIS data using the export methods (e.g. roads_cs.csv). 
+CSV files for import, CSV files for matching types of objects, trees.png file and import_export.txt file have to be stored in folder: c:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Files\. This folder is also used to store CSV files to output game objects as GIS data using the export methods (e.g. roads_cs.csv). 
 
-File import_export.conf lists parameters for configurying the import and export methods. Here's the complete list of parameters. 
+File import_export.txt lists parameters for configurying the import and export methods. Here's the complete list of parameters. 
 
 MapName: 
 - Description: not used in the code, just a label for distinguishing the file from others

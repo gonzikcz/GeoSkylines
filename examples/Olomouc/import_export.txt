@@ -1,0 +1,17 @@
+MapName: Olomouc
+CenterLatitude: 49.588705
+CenterLongitude: 17.247812
+ImportRoadsCoordMax: 4800
+ImportRailsCoordMax: 4800
+ImportBuildingsCoordMax: 4800
+ImportZonesCoordMax: 4800
+ImportTreesRasterOffTolerance: 0
+ImportTreesRasterOffsetX: 480
+ImportTreesRasterOffsetY: 870
+ImportTreesRasterMultiply: 1
+ImportTreesTreeTypes: Tree2,Tree2variant,Tree3variant,Bush02,Corsican Pine 01,Green Tree 01
+ImportTreesCoordMax: 8640
+ImportWaterWayTypes: river2,river
+ImportWaterWayDepths: 15,10
+ImportWaterWayWidths: 1,0
+ImportWaterDepth: 15
