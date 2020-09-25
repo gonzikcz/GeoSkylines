@@ -18,7 +18,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;UNITY</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -55,6 +55,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="burningmime.curves\CubicBezier.cs" />
+    <Compile Include="burningmime.curves\CurveBuilder.cs" />
+    <Compile Include="burningmime.curves\CurveFit.cs" />
+    <Compile Include="burningmime.curves\CurveFitBase.cs" />
+    <Compile Include="burningmime.curves\CurvePreprocess.cs" />
+    <Compile Include="burningmime.curves\Spline.cs" />
+    <Compile Include="burningmime.curves\SplineBuilder.cs" />
+    <Compile Include="burningmime.curves\VectorHelper.cs" />
     <Compile Include="GeoSkylines.cs" />
     <Compile Include="GeoSkylinesExport.cs" />
     <Compile Include="GeoSkylinesImport.cs" />
