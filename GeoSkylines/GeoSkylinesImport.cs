@@ -90,13 +90,13 @@ namespace GeoSkylines
 
         public void LoadConfiguration()
         {
-            if (!File.Exists("Files/import_export.conf"))
+            if (!File.Exists("Files/import_export.txt"))
             {
                 panel.SetMessage("GeoSkylines", "No configuration file provided!", false);
                 confloaded = false;
             }
 
-            StreamReader confSr = File.OpenText("Files/import_export.conf");
+            StreamReader confSr = File.OpenText("Files/import_export.txt");
             Dictionary<string, string> conf = new Dictionary<string, string>();
             while (!confSr.EndOfStream)
             {
@@ -227,9 +227,17 @@ namespace GeoSkylines
                 
             ushort cntNoName = 1;
             ushort bridges = 0;
+            ushort cntLenDiff = 0;
             while (!sr.EndOfStream)
-            {
+            {                                
                 fields = CSVParser.Split(sr.ReadLine());
+                //Debug.Log("field_names.Length: " + field_names.Length + ", fields.Length: " + fields.Length);
+                //Debug.Log("ID: " + fields[2]);
+                if (field_names.Length != fields.Length)
+                {
+                    cntLenDiff++;
+                    continue;
+                }
 
                 string coords = "";
                 string oneWay = "";
@@ -241,8 +249,8 @@ namespace GeoSkylines
                 for (int i = 0; i < field_names.Length; i++)
                 {
                     var columnName = field_names[i].Trim().ToLower();
-                    var columnValue = fields[i].Replace("\"", "");                                        
-                    //Debug.Log(columnName + ": " + columnValue);
+                    var columnValue = fields[i].Replace("\"", "");
+                    //Debug.Log("columnName: " + columnName + ",  columnValue: " + columnValue);                    
                     if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
 
@@ -256,8 +264,9 @@ namespace GeoSkylines
                     if (columnName == "lanes")
                         if (columnValue.Length > 0)
                         {
-                            //Debug.Log(fields[i] + " - " + columnValue);
-                            lanes = int.Parse(columnValue);
+                            //Debug.Log(fields[i] + " - " + columnValue);                            
+                            if (!int.TryParse(columnValue, out lanes))
+                                lanes = 1;
                         }
 
 
@@ -272,7 +281,7 @@ namespace GeoSkylines
                     }
 
                     if (columnName == "id")
-                        roadId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out roadId);                       
 
                     if (columnName == "road_type")
                         roadType = columnValue;
@@ -289,8 +298,9 @@ namespace GeoSkylines
                 if (coords == "")
                     continue;
 
+                Debug.Log("roadId: " + roadId);
                 // get the NetInfo prefab here, skip records that have no mapping    
-                if (!ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay))
+                if (!ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay, lanes))
                     continue;               
 
                 // get the vertexes from WKT
@@ -313,7 +323,7 @@ namespace GeoSkylines
                         if (segCoords.Count > 0)
                         {
                             var prevP = segCoords[segCoords.Count - 1];
-                            var len = VectorUtils.LengthXY(pos-prevP);                            
+                            var len = VectorUtils.LengthXY(pos-prevP);
                             if (len > 88)
                             {
                                 var div = (int)len / 90;
@@ -341,19 +351,23 @@ namespace GeoSkylines
 
                     }
                 }
+                //Debug.Log("AAA");
                 
                 var coordsCnt = segCoords.Count;
                 if (coordsCnt == 0)
                     continue; // geometry was out of coordMax
 
-                // find roundabouts and make them into one ways                    
-                if (segCoords[0] == segCoords[coordsCnt - 1])
+                // find roundabouts and make them into one ways  
+                if (coordsCnt > 0 && segCoords[0] == segCoords[coordsCnt - 1])
                 {                    
                     oneWay = "yes";
-                    ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay);
+                    ObtainNetInfo(out ni, roadMapping, roadType, bridge, oneWay, lanes);
                 }
 
+                //Debug.Log("BBB");
+
                 // fill in NodeMap and set junctions
+                // something wrong here with roadId 4987481 Array index is out of range.
                 foreach (var segCoord in segCoords)
                 {
                     if (FindNode(out GeoSkylinesNode inNode, segCoord))
@@ -372,12 +386,14 @@ namespace GeoSkylines
                         }
                         nodeMap[xRound].Add(newNode);
                     }
-                }    
-
+                }
                 GeoSkylinesRoad road = new GeoSkylinesRoad(roadId, streetName, roadType, oneWay, lanes, bridge, segCoords, ni, 0);
                 roads.Add(road);
             }
 
+            Debug.Log("NUMBER OF DIFF FIELD LEN: " + cntLenDiff);
+
+            //Debug.Log("CCC");
             sr.Close();
 
             // I need to preserve junctions, otherwise using Bezier curves (big reduction in nodes)   
@@ -400,6 +416,7 @@ namespace GeoSkylines
                         totalLen = seg.length;
                         firstSeg = true;
                     }
+                    //Debug.Log("DDD");
 
                     if (firstSeg)
                     {
@@ -416,6 +433,7 @@ namespace GeoSkylines
                         totalLen = 0;
                         firstSeg = true;
                     }
+                    //Debug.Log("EEE");
                 }
                 CreateCSSegments(road, tmpPoss);
             }
@@ -423,16 +441,21 @@ namespace GeoSkylines
             panel.SetMessage("GeoSkylines", "Roads import complete.", false);
         }
 
-        public bool ObtainNetInfo(out NetInfo ni, Dictionary<string, string> mapping, string netType, bool bridge, string oneWay)
+        public bool ObtainNetInfo(out NetInfo ni, Dictionary<string, string> mapping, string netType, bool bridge, string oneWay, int lanes)
         {                            
             ni = PrefabCollection<NetInfo>.FindLoaded("Basic Road");
 
             string rt = netType;
             if (oneWay == "yes")
                 rt += "_oneway";
+            string rt_withLanes = rt;
+            if (lanes > 1)
+                rt_withLanes += "_" + lanes;
 
             string prefab_name = "";
-            if (mapping.ContainsKey(rt))
+            if (mapping.ContainsKey(rt_withLanes))
+                prefab_name = mapping[rt_withLanes];
+            if (prefab_name == "" && mapping.ContainsKey(rt))
                 prefab_name = mapping[rt];
             if (prefab_name == "" && mapping.ContainsKey(netType))
                 prefab_name = mapping[netType];
@@ -602,7 +625,7 @@ namespace GeoSkylines
                     }
 
                     if (columnName == "id")
-                        roadId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out roadId);
 
                 }                
 
@@ -809,7 +832,7 @@ namespace GeoSkylines
                         railType = columnValue;
 
                     if (columnName == "id")
-                        railId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out railId);                        
 
                     if (columnName == "bridge")
                         if (columnValue != "")
@@ -820,7 +843,7 @@ namespace GeoSkylines
                     continue;
 
                 // get the NetInfo prefab here, skip records that have no mapping    
-                if (!ObtainNetInfo(out ni, railMapping, railType, bridge, ""))
+                if (!ObtainNetInfo(out ni, railMapping, railType, bridge, "", 0))
                     continue;
 
                 // get the vertexes from WKT
@@ -1011,19 +1034,19 @@ namespace GeoSkylines
                         bldType = columnValue;
 
                     else if (columnName == "height")
-                        height = float.Parse(columnValue);
+                        float.TryParse(columnValue, out height);
 
                     else if (columnName == "levels" && fields[i].Length != 0)
-                        bldLvl = int.Parse(columnValue);
+                        int.TryParse(columnValue, out bldLvl);
 
-                    else if (columnName == "angle")                    
-                        angle = float.Parse(columnValue);
+                    else if (columnName == "angle")
+                        float.TryParse(columnValue, out angle);
 
                     else if (columnName == "width")
-                        width = float.Parse(columnValue);
+                        float.TryParse(columnValue, out width);
 
                     else if (columnName == "id")
-                        bldId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out bldId);                        
                 }
 
                 if (coords == "")
@@ -1217,7 +1240,7 @@ namespace GeoSkylines
                 for (int i = 0; i < field_names.Length; i++)
                 {
                     var columnName = field_names[i].Trim().ToLower();
-                    var columnValue = fields[i].Replace("\"", "");                    
+                    var columnValue = fields[i].Replace("\"", "");
                     //Debug.Log(columnName + ": " + columnValue);
                     if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
@@ -1226,7 +1249,7 @@ namespace GeoSkylines
                         treeType = columnValue;
 
                     else if (columnName == "id")
-                        treeId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out treeId);                        
                 }
 
                 if (coords == "")
@@ -1583,7 +1606,7 @@ namespace GeoSkylines
                 for (int i = 0; i < field_names.Length; i++)
                 {
                     var columnName = field_names[i].Trim().ToLower();
-                    var columnValue = fields[i].Replace("\"", "");                    
+                    var columnValue = fields[i].Replace("\"", "");
                     //Debug.Log(columnName + ": " + columnValue);
                     if (columnName == "geometry")
                         ProvideCoordsString(out coords, columnValue);
@@ -1592,7 +1615,7 @@ namespace GeoSkylines
                         serviceType = columnValue;
 
                     else if (columnName == "id")
-                        serviceId = ulong.Parse(columnValue);
+                        ulong.TryParse(columnValue, out serviceId);                        
                 }
 
                 if (coords == "")

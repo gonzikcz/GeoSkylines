@@ -9,6 +9,7 @@ using UnityEngine;
 using System.Collections;
 using ColossalFramework.Math;
 using ColossalFramework;
+using System.Drawing.Printing;
 
 namespace GeoSkylines
 {
@@ -908,6 +909,30 @@ namespace GeoSkylines
             outputFile.Close();
 
             panel.SetMessage("GeoSkylines", "Trees export completed. ", false);
+        }
+
+        public void RemoveAllOfSomething(string something)
+        {
+            if (something == "train")
+            {
+
+            }
+
+            NetSegment[] segments = net_manager.m_segments.m_buffer;
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var a_seg = segments[i];
+
+                if (a_seg.m_startNode == 0 || a_seg.m_endNode == 0)
+                    continue;
+
+                string infoTxt = a_seg.Info.ToString();
+
+                if (infoTxt.Contains("Train Line") || infoTxt.Contains("Train Track"))
+                {                    
+                    net_manager.ReleaseSegment((ushort)i, false);
+                }                  
+            }
         }
 
         public bool WithinExportCoords(Vector3 position)

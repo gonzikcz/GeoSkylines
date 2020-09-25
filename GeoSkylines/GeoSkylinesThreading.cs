@@ -391,10 +391,10 @@ namespace GeoSkylines
                 {
                     if (r != 1)
                         return;
-                    //GeoSkylinesImport exp = new GeoSkylinesImport();
-                    GeoSkylinesImport imp = new GeoSkylinesImport();
-                    imp.DebugRoad();
-                    //exp.RemoveDisconnectedSegments();
+                    GeoSkylinesExport exp = new GeoSkylinesExport();
+                    //GeoSkylinesImport imp = new GeoSkylinesImport();
+                    //imp.DebugRoad();
+                    exp.RemoveAllOfSomething("train");
                 });
             }
             else
