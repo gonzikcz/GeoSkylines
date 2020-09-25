@@ -1,7 +1,7 @@
-# UPDATE VALUES HERE
+# !!! UPDATE VALUES HERE !!!
 x,y = 485463.721,4287814.414
 inProjTxt = 'epsg:32629'
-# UPDATE VALUES HERE
+# !!! UPDATE VALUES HERE !!!
 
 
 
@@ -121,11 +121,23 @@ terrainParty_URL += str(minLon)
 terrainParty_URL += ","
 terrainParty_URL += str(minLat)
 
-#gdal_text = "-projwin "
-#gdal_text += 
+gdal_text = "-projwin "
+gdal_text += str(x-half)
+gdal_text += " "
+gdal_text += str(y+half)
+gdal_text += " "
+gdal_text += str(x+half)
+gdal_text += " "
+gdal_text += str(y-half)
 
 file_path = os.path.join(path, "cs_area_info.txt")
 with open(file_path, 'w') as cs_area:    
+    cs_area.write('INPUT: \n')
+    cs_area.write('x, y: ' + str(x) + ', ' + str(y) + '\n')
+    cs_area.write('UTM zone EPSG code: ' + inProjTxt + '\n')
+    cs_area.write('\n')
+    cs_area.write('OUTPUT: \n')
     cs_area.write('CenterLongitude: ' + str(lon) + '\n')
     cs_area.write('CenterLatitude: ' + str(lat) + '\n')
     cs_area.write('Terrain.party: ' + terrainParty_URL + '\n')
+    cs_area.write('For gdal_translate: ' + gdal_text + '\n')
