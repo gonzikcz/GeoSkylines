@@ -1,0 +1,17 @@
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.csprojAssemblyReference.cache
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.AssemblyInfoInputs.cache
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.AssemblyInfo.cs
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.csproj.CoreCompileInputs.cache
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\CS_SegmentMonitor.deps.json
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\CS_SegmentMonitor.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\CS_SegmentMonitor.pdb
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\Assembly-CSharp-firstpass.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\Assembly-CSharp.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\ColossalManaged.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\ICities.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\UnityEngine.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\PopsApiWrapper.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\bin\Debug\netcoreapp3.1\ICSharpCode.SharpZipLib.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.csproj.CopyComplete
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.dll
+C:\Users\Honza\source\repos\CS_SegmentMonitor\CS_SegmentMonitor\obj\Debug\netcoreapp3.1\CS_SegmentMonitor.pdb
