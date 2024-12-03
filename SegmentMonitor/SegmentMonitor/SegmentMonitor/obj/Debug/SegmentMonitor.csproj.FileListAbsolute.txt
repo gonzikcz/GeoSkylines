@@ -1,0 +1,14 @@
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\SegmentMonitor.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\SegmentMonitor.pdb
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\Assembly-CSharp-firstpass.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\Assembly-CSharp.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\ColossalManaged.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\ICities.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\UnityEngine.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\PopsApiWrapper.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\bin\Debug\ICSharpCode.SharpZipLib.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\obj\Debug\SegmentMonitor.csprojAssemblyReference.cache
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\obj\Debug\SegmentMonitor.csproj.CoreCompileInputs.cache
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\obj\Debug\SegmentMonitor.csproj.CopyComplete
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\obj\Debug\SegmentMonitor.dll
+C:\Users\Honza\source\repos\SegmentMonitor\SegmentMonitor\obj\Debug\SegmentMonitor.pdb
